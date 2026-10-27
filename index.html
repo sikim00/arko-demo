@@ -1,0 +1,560 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow">
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script>window.FIREBASE_CONFIG={
+  "apiKey": "AIzaSyCNCyql2b8WOSpeLf_2sDH6lucEit0si3Q",
+  "authDomain": "arko-demo.firebaseapp.com",
+  "projectId": "arko-demo",
+  "storageBucket": "arko-demo.firebasestorage.app",
+  "messagingSenderId": "24099018564",
+  "appId": "1:24099018564:web:9041dda8e05212f0aa6911"
+};</script>
+<style>[hidden]{display:none!important}body{margin:0}</style></head><body>
+<title>아르코마린 ERP 웹 시연</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: 엑셀 5개 프로그램(견적관리·오더관리) 흐름을 그대로 옮긴 사무실 PC 화면 + 선사 공무감독 폰 화면. 상태 이름과 입력 칸은 엑셀 그대로 */
+:root{
+  --bg:#eef2f5; --panel:#ffffff; --ink:#0f2233; --muted:#5b6b7a; --line:#d5dde4;
+  --navy:#123a5c; --accent:#d9481c; --accent-soft:#fbe6de;
+  --ok:#1f7a4d; --ok-soft:#dcf1e5; --warn:#a86400; --warn-soft:#fbefd6; --info-soft:#dfeaf4;
+  --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c1620; --panel:#132230; --ink:#e3ebf2; --muted:#93a4b4; --line:#253849;
+  --navy:#7fb2de; --accent:#ff7a4d; --accent-soft:#3a2219;
+  --ok:#5cc98f; --ok-soft:#173326; --warn:#f0b04a; --warn-soft:#352812; --info-soft:#18304a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1620; --panel:#132230; --ink:#e3ebf2; --muted:#93a4b4; --line:#253849;
+  --navy:#7fb2de; --accent:#ff7a4d; --accent-soft:#3a2219;
+  --ok:#5cc98f; --ok-soft:#173326; --warn:#f0b04a; --warn-soft:#352812; --info-soft:#18304a; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+button{font:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+h1{font-size:19px;margin:0;text-wrap:balance}
+h2{font-size:15px;margin:0 0 10px}
+.sub{color:var(--muted);margin:2px 0 0;font-size:13px}
+.note{font-size:12px;color:var(--muted)}
+.pill{display:inline-block;font-size:11.5px;padding:2px 8px;border-radius:10px;background:var(--info-soft);color:var(--navy);font-weight:500;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.hot{background:var(--accent-soft);color:var(--accent)}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 16px;border-radius:5px}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn.sm{padding:4px 10px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:default}
+.link{background:none;border:0;color:var(--muted);text-decoration:underline;font-size:12px;padding:0}
+.ribbon{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.ribbon .grp{font-size:11px;color:var(--muted);letter-spacing:.04em;margin-right:2px}
+.ribbon .sep{width:1px;height:22px;background:var(--line)}
+
+.topbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));background:var(--panel);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:baseline;gap:8px;font-weight:700;font-size:16px;color:var(--navy)}
+.brand small{font-weight:500;color:var(--muted);font-size:12px}
+.spacer{flex:1}
+
+.role{max-width:720px;margin:0 auto;padding-block:40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.role-card{background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:22px 18px;text-align:left;display:flex;flex-direction:column;gap:6px;color:var(--ink)}
+.role-card:hover{border-color:var(--accent)}
+.role-card b{font-size:18px}
+.role-card span{color:var(--muted);font-size:13px}
+
+.rail{display:grid;grid-template-columns:repeat(11,1fr);gap:3px}
+.rail div{text-align:center;padding:6px 2px;border-radius:4px;font-size:11.5px;border:1px solid var(--line);color:var(--muted);background:var(--panel);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail .done{background:var(--ok-soft);border-color:transparent;color:var(--ok)}
+.rail .now{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.rail .later{border-style:dashed;opacity:.55}
+.rail .rej{background:var(--warn-soft);border-color:transparent;color:var(--warn)}
+.rail.sm{grid-template-columns:repeat(4,1fr)}
+.rail.sm div{font-size:10.5px;padding:4px 1px}
+
+.web{padding-block:16px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px;max-width:1180px;margin:0 auto}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cols{display:grid;grid-template-columns:1.6fr 1fr;gap:14px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0}
+.box.act{border-top:3px solid var(--accent)}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:5px 12px;font-size:13px;margin:0}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.form{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.form.c2{grid-template-columns:1fr 1fr}
+label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+input,select{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:6px 8px;min-width:0;width:100%}
+input[type=number]{text-align:right}
+.radios{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--ink)}
+.radios label{flex-direction:row;align-items:center;gap:4px;color:var(--ink);font-size:13px}
+.radios input{width:auto}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-weight:500;color:var(--muted);font-size:11.5px;background:var(--bg)}
+td.r,th.r{text-align:right}
+td.c,th.c{text-align:center}
+tr.click{cursor:pointer}
+tr.click:hover td{background:var(--info-soft)}
+table input,table select{padding:4px 6px;font-size:12.5px}
+.sheet{border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:12px;display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+.sheet .h{font-weight:600;font-size:14px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.sheet .lh{font-size:11px;color:var(--muted)}
+.total{display:flex;justify-content:flex-end;gap:24px;padding-top:8px;font-size:13px}
+.total b{font-size:15px}
+.actions{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.wait{display:flex;gap:12px;align-items:center;padding:11px 14px;border-radius:6px;background:var(--warn-soft);color:var(--warn);font-weight:500;font-size:13px}
+.wait.ok{background:var(--ok-soft);color:var(--ok)}
+.wait.info{background:var(--info-soft);color:var(--navy)}
+.wait .dot{width:10px;height:10px;border-radius:50%;background:var(--warn);flex:none;animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.25}}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:10px}
+.tabs button{border:1px solid var(--line);border-bottom:0;background:var(--bg);color:var(--muted);padding:6px 12px;border-radius:5px 5px 0 0;font-size:12.5px}
+.tabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);font-weight:600}
+.overlay{position:fixed;inset:0;background:rgba(10,20,30,.45);display:flex;align-items:center;justify-content:center;z-index:30;padding:16px}
+.modal{background:var(--panel);border-radius:8px;padding:20px;width:460px;max-width:100%;display:flex;flex-direction:column;gap:12px;border:1px solid var(--line);max-height:90vh;overflow:auto}
+.modal h2{margin:0}
+.modal .form{margin:0;grid-template-columns:1fr}
+
+.vtl{list-style:none;margin:0;padding:0}
+.vtl li{position:relative;padding:0 0 10px 22px;font-size:12.5px}
+.vtl li::before{content:"";position:absolute;left:4px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--line)}
+.vtl li::after{content:"";position:absolute;left:8px;top:16px;bottom:0;width:2px;background:var(--line)}
+.vtl li:last-child::after{display:none}
+.vtl li.done::before{background:var(--ok)}
+.vtl li.now::before{background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.vtl li.later{opacity:.55}
+.vtl .d{font-size:11.5px;color:var(--muted)}
+.by{font-size:11px;padding:1px 6px;border-radius:3px;background:var(--info-soft);color:var(--navy);margin-left:6px}
+
+.mob-stage{display:flex;justify-content:center;gap:32px;flex-wrap:wrap;padding-block:24px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.phone{width:390px;max-width:100%;height:760px;border:10px solid #0f2a42;border-radius:36px;background:var(--bg);overflow:hidden;display:flex;flex-direction:column}
+.ph-head{background:var(--navy);color:#fff;padding:14px 16px 12px;display:flex;flex-direction:column;gap:2px}
+.ph-head .who{font-size:12px;opacity:.85}
+.ph-head .t{font-size:17px;font-weight:600;display:flex;align-items:center;gap:8px}
+.ph-head .back{border:0;background:transparent;color:inherit;font-size:22px;padding:0 4px 0 0;line-height:1}
+.ph-body{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card.tap{cursor:pointer}
+.card .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card .ship{font-weight:600}
+.meta{font-size:12px;color:var(--muted)}
+.big-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.big-btns .btn{padding:12px}
+.banner{border-radius:10px;padding:12px;font-weight:600;font-size:14px;display:flex;justify-content:space-between;align-items:center;border:0;width:100%;text-align:left}
+.banner.hot{background:var(--accent);color:#fff}
+.banner.ok{background:var(--ok-soft);color:var(--ok);font-weight:500;font-size:13px;display:block}
+.banner.info{background:var(--info-soft);color:var(--navy);font-weight:500;font-size:13px}
+.card table{font-size:11.5px}.card th,.card td{padding:4px 5px}
+.aside-note{max-width:320px;display:flex;flex-direction:column;gap:12px;align-self:center}
+.aside-note ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;color:var(--muted)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--navy);color:#fff;padding:10px 16px;border-radius:6px;font-weight:500;z-index:40;max-width:calc(100vw - 32px);text-align:center}
+
+@media (max-width:900px){
+  .cols,.form,.form.c2{grid-template-columns:1fr}
+  .role-grid{grid-template-columns:1fr}
+  .rail{grid-template-columns:repeat(4,1fr)}
+  .aside-note{display:none}
+  .phone{border-width:0;border-radius:0;height:auto;min-height:calc(100vh - 56px)}
+  .mob-stage{padding:0}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+
+<header class="topbar">
+  <div class="brand">아르코마린 ERP <small>웹 시연 · 옥슨앤파트너스</small></div>
+  <span class="pill hot">시연 · 테스트 DB 자료</span>
+  <span id="sync" class="pill">연결 중…</span>
+  <span class="spacer"></span>
+  <button id="role-sw" class="btn sm" hidden>역할 바꾸기</button>
+  <button id="reset" class="btn sm" hidden>다시 시작</button>
+</header>
+
+<div id="role" class="role">
+  <div><h1>어느 쪽 화면을 볼까요?</h1><p class="sub">사무실은 PC에서, 선사 공무감독은 폰에서 고릅니다. 두 화면은 같은 자료를 봅니다.</p></div>
+  <div class="role-grid">
+    <button class="role-card" id="pick-office"><b>사무실</b><span>옥슨 · 견적관리(견적서류 등록, 서류_작성) → 오더관리(입고, 인수증)</span></button>
+    <button class="role-card" id="pick-sup"><b>공무감독</b><span>선사 ARKOR MARINE · 담당 선박의 견적(QUOTATION) 확인·승인, 발주내역·부품 이력</span></button>
+  </div>
+</div>
+<div id="web" class="web" hidden></div>
+<div id="mob" class="mob-stage" hidden>
+  <div class="phone">
+    <div class="ph-head" id="ph-head"></div>
+    <div class="ph-body" id="ph-body"></div>
+  </div>
+  <div class="aside-note">
+    <h2>선사 공무감독이 폰으로 보는 화면</h2>
+    <ol>
+      <li>사무실이 QUOTATION을 보내면 폰 맨 위에 "새 견적 1건"이 뜹니다.</li>
+      <li>견적서(QUOTATION 서식 그대로)를 보고 "승인"을 누릅니다. 엑셀의 CONFIRM 단계입니다.</li>
+      <li>그 순간 사무실 작업 시트 상태가 CONFIRM으로 바뀝니다.</li>
+      <li>선박을 누르면 발주내역(Order Status Report)과 부품 이력을 봅니다.</li>
+    </ol>
+    <p class="note">실제 폰으로 열면 이 화면만 전체로 뜹니다.</p>
+  </div>
+</div>
+<div id="modal-root"></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const won=n=>Math.round(n).toLocaleString("ko-KR");
+const todayISO=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
+const stamp=()=>{const d=new Date();return d.toLocaleDateString("ko-KR",{month:"numeric",day:"numeric"})+" "+d.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});};
+
+/* 상태: 견적관리 작업시트 G4 (접수→INQUIRY→QUOTATION→CONFIRM→PURCHASE) → 오더관리 (입고→납품→청구) → 청구·자금관리 (회색) */
+const ST=["접수","INQUIRY","QUOTATION","CONFIRM","PURCHASE","입고","납품","청구","결재","계산서","입금"];
+const DEMO_LAST=6; // 납품까지 시연, 그 뒤는 회색
+const WHO={"접수":"사무실 · 견적서류 등록","INQUIRY":"사무실 · 서류_작성","QUOTATION":"사무실 · 서류_작성","CONFIRM":"선사 공무감독 · 폰","PURCHASE":"사무실 · 서류_작성","입고":"사무실 · 오더_검색","납품":"사무실 · 인수증","청구":"Additional Charge 등록","결재":"청구관리 기안·검토·결재","계산서":"청구관리 계산서 처리","입금":"자금관리 미수금"};
+/* 테스트 DB 기준정보 (테스트용_바로실행\ENI.accdb) */
+const OWNERS=[{name:"ARKOR MARINE",kind:"국내 · 선주",ships:["SEIN GRACE","SEIN PHOENIX"]}];
+const EMPS=["테스트대표","테스트과장"];
+const VENDORS=["부산선박부품","한국마린서플라이"];
+const PARTS=[
+  {machinery:"MAIN ENGINE",maker:"HYUNDAI-B&W",type:"6S50MC-C",partNo:"90310-01",desc:"FUEL VALVE NOZZLE",origin:"KOREA",unit:"PCS",dday:7,buy:47500,sell:65000,vendor:"부산선박부품"},
+  {machinery:"MAIN ENGINE",maker:"HYUNDAI-B&W",type:"6S50MC-C",partNo:"90501-12",desc:"O-RING 1/2\"",origin:"KOREA",unit:"PCS",dday:7,buy:500,sell:700,vendor:"부산선박부품"},
+  {machinery:"GENERATOR ENGINE",maker:"HIMSEN",type:"6H21/32",partNo:"H21-0703",desc:"PISTON RING SET",origin:"KOREA",unit:"SET",dday:14,buy:190000,sell:400000,vendor:"한국마린서플라이"}
+];
+const line=(p,qty,state)=>({...PARTS[p],qty,uPrice:PARTS[p].sell,cur:"KRW",state:state||""});
+function past(fileName,refNo,ship,date,lines,place){
+  return {fileName,refNo,owner:"ARKOR MARINE",ship,emp:"테스트과장",recvDate:date,status:"납품",lines:lines.map(([p,q])=>line(p,q,"발주")),입고지:"부산 창고",중량:5,place,delivered:date,events:[]};
+}
+const PAST=[
+  past("ARK-SG-26-0001","SG-REQ-001","SEIN GRACE","2026-07-14",[[0,2],[1,10]],"BUSAN PORT"),
+  past("ARK-SG-26-0002","SG-REQ-002","SEIN GRACE","2026-08-22",[[2,1]],"ULSAN PORT"),
+  past("ARK-SP-26-0001","SP-REQ-001","SEIN PHOENIX","2026-09-18",[[0,4]],"BUSAN PORT")
+];
+const DEFAULT={orders:PAST,seq:{SG:3,SP:2}};
+let S=JSON.parse(JSON.stringify(DEFAULT));
+let role=null,view="list",openFile=null,tab="발주",mView="ships",mShip=null,db=null,tt;
+
+const si=x=>ST.indexOf(x.status);
+const quoteAmt=x=>x.lines.filter(l=>l.state==="견적"||l.state==="발주").reduce((s,l)=>s+l.uPrice*l.qty,0);
+const poAmt=x=>x.lines.filter(l=>l.state==="발주").reduce((s,l)=>s+l.buy*l.qty,0);
+const shipCode=s=>s.split(" ").map(w=>w[0]).join("").toUpperCase();
+function save(){rerender();persist();}
+function addEvent(x,status,by,note){x.events=(x.events||[]).concat([{status,at:stamp(),by,note:note||""}]);}
+function setStatus(x,st,by,note){x.status=st;addEvent(x,st,by,note);}
+
+/* 폰 진행 줄: 선사가 보는 이름 (QUOTATION→견적, CONFIRM→승인, PURCHASE→발주, 입고, 납품) */
+const PH_RAIL=[["QUOTATION","견적"],["CONFIRM","승인"],["PURCHASE","발주"],["입고","입고"],["납품","납품"]];
+function rail(x,small){
+  const i=si(x);
+  if(small){
+    return `<div class="rail sm" style="grid-template-columns:repeat(5,1fr)">${PH_RAIL.map(([st,lab])=>{
+      const k=ST.indexOf(st),done=k<i||(k===i&&i>=DEMO_LAST),now=k===i&&i<DEMO_LAST,rej=x.rejected&&st==="CONFIRM";
+      return `<div class="${rej?"rej":done?"done":now?"now":""}" title="${st}">${lab}</div>`}).join("")}</div>`;
+  }
+  return `<div class="rail">${ST.map((s,k)=>{
+    const later=k>DEMO_LAST,done=k<i||(k===i&&i>=DEMO_LAST),now=k===i&&i<DEMO_LAST;
+    const rej=x.rejected&&s==="CONFIRM";
+    return `<div class="${later?"later":rej?"rej":done?"done":now?"now":""}" title="${WHO[s]}">${s}</div>`}).join("")}</div>`;
+}
+function timeline(x){
+  const i=si(x);
+  return `<ul class="vtl">${ST.map((s,k)=>{
+    const later=k>DEMO_LAST,ev=(x.events||[]).find(e=>e.status===s);
+    const cls=later?"later":k<=i&&ev?"done":k===i?"now":"";
+    const d=later?"다음 단계 (시연 범위 밖)":ev?`${ev.at}${ev.note?" · "+ev.note:""}`:k===i?"지금 단계":"예정";
+    return `<li class="${cls}">${s}<span class="by">${WHO[s]}</span><div class="d">${d}</div></li>`}).join("")}</ul>`;
+}
+function statusPill(x){
+  if(x.rejected)return '<span class="pill warn">반려</span>';
+  const c=x.status==="QUOTATION"?"hot":x.status==="납품"?"ok":"";
+  return `<span class="pill ${c}">${x.status}</span>`;
+}
+/* 서식 표: QUOTATION / 발주내역 / 인수증 */
+function quoDoc(x){
+  const ls=x.lines.filter(l=>l.state);
+  return `<div class="sheet"><div class="h"><span>QUOTATION</span><span class="mono">${x.fileName}</span></div><div class="lh">ARKOR MARINE · 2nd Floor KAL bldg., 146, Jungang-daero, Jung-gu, Busan · Ref No ${x.refNo} · ${x.ship}</div>
+  <div class="tbl-wrap"><table><thead><tr><th>No.</th><th>Part No.</th><th>Description</th><th>Origin</th><th class="r">Q'ty</th><th>UT</th><th class="r">U/Price</th><th class="r">T/Price</th><th class="r">Day</th></tr></thead><tbody>${
+    ls.map((l,i)=>`<tr><td>${i+1}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td>${l.origin}</td><td class="r num">${l.qty}</td><td>${l.unit}</td><td class="r num">${won(l.uPrice)}</td><td class="r num">${won(l.uPrice*l.qty)}</td><td class="r num">${l.dday}</td></tr>`).join("")
+  }</tbody></table></div><div class="total"><span>TOTAL (KRW) <b class="num">${won(quoteAmt(x))}</b></span></div></div>`;
+}
+function poDoc(x,vendor){
+  const ls=x.lines.filter(l=>l.state==="발주"&&l.vendor===vendor);
+  return `<div class="sheet"><div class="h"><span>PURCHASE ORDER · ${vendor}</span><span class="mono">${x.fileName}</span></div>
+  <div class="tbl-wrap"><table><thead><tr><th>No.</th><th>Part No.</th><th>Description</th><th class="r">Q'ty</th><th>UT</th><th class="r">U/Price</th><th class="r">T/Price</th><th class="r">Day</th></tr></thead><tbody>${
+    ls.map((l,i)=>`<tr><td>${i+1}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td class="r num">${l.qty}</td><td>${l.unit}</td><td class="r num">${won(l.buy)}</td><td class="r num">${won(l.buy*l.qty)}</td><td class="r num">${l.dday}</td></tr>`).join("")
+  }</tbody></table></div><div class="total"><span>발주 합계 <b class="num">${won(ls.reduce((s,l)=>s+l.buy*l.qty,0))}</b></span></div></div>`;
+}
+function orderStatusTable(x,forShip){
+  const ls=x.lines.filter(l=>l.state==="발주");
+  const i=si(x);
+  return `<div class="tbl-wrap"><table><thead><tr><th>NO.</th><th>PART NO</th><th>DESCRIPTION</th><th class="r">Q'TY</th><th>재고 (입고예정일)</th><th>Remark</th>${forShip?"":"<th>매입처</th>"}<th>견적상태</th><th>입고(예정)일</th></tr></thead><tbody>${
+    ls.map((l,k)=>`<tr><td>${k+1}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td class="r num">${l.qty}</td><td>${i>=5?"입고":"D+"+l.dday}</td><td></td>${forShip?"":`<td>${l.vendor}</td>`}<td>${x.status}</td><td class="num">${x.recvIn||""}</td></tr>`).join("")
+  }</tbody></table></div>`;
+}
+
+/* ---------- 사무실 (PC) ---------- */
+function vList(){
+  const rows=[...S.orders].reverse();
+  return `<div class="ribbon"><span class="grp">견적관리</span><button class="btn pri sm" id="new-quote">견적서류 등록</button><button class="btn sm" id="r-search">견적서류 검색</button><span class="sep"></span><span class="grp">오더관리</span><button class="btn sm" id="r-order">오더_검색</button><button class="btn sm" disabled title="다음 단계">Additional Charge등록</button><span class="sep"></span><span class="grp">청구관리 · 자금관리 · DB관리</span><button class="btn sm" disabled>기안 문서 조회</button><button class="btn sm" disabled>미수금_목록</button><button class="btn sm" disabled>대량이체 등록</button></div>
+  <div class="box"><h2>ORDER LIST</h2><div class="tbl-wrap"><table><thead><tr><th>담당자</th><th>매출처</th><th>선명</th><th>File Name</th><th>Ref No</th><th>접수일</th><th>상태</th><th class="r">견적금액</th><th class="r">발주금액</th></tr></thead><tbody>${
+    rows.map(x=>`<tr class="click" data-file="${x.fileName}"><td>${x.emp}</td><td>${x.owner}</td><td>${x.ship}</td><td class="mono">${x.fileName}</td><td class="mono">${x.refNo}</td><td class="num">${x.recvDate}</td><td>${statusPill(x)}</td><td class="r num">${won(quoteAmt(x))}</td><td class="r num">${won(poAmt(x))}</td></tr>`).join("")
+  }</tbody></table></div><p class="note">줄을 누르면 작업 시트가 열립니다. 「견적서류 등록」이 엑셀 리본의 첫 버튼입니다.</p></div>`;
+}
+function vNew(){
+  const o=OWNERS[0];
+  return `<div class="bar"><button class="btn" id="back">← ORDER LIST</button><h1>New Quotation (견적서류 등록)</h1></div>
+  <div class="box act">
+    <div class="form"><div class="radios"><label><input type="radio" name="nq-area" checked>국내</label><label><input type="radio" name="nq-area">해외</label></div>
+      <div class="radios"><label><input type="radio" name="nq-kind">일반</label><label><input type="radio" name="nq-kind">딜러</label><label><input type="radio" name="nq-kind" checked>선주</label></div><span></span></div>
+    <div class="form">
+      <label for="nq-owner">매출처<select id="nq-owner">${OWNERS.map(c=>`<option>${c.name}</option>`).join("")}</select></label>
+      <label for="nq-ship">선박<select id="nq-ship">${o.ships.map(s=>`<option>${s}</option>`).join("")}</select></label>
+      <label for="nq-emp">담당 직원<select id="nq-emp">${EMPS.map(e=>`<option>${e}</option>`).join("")}</select></label>
+      <label for="nq-ref">Ref No<input id="nq-ref" value="SG-REQ-${String(S.seq.SG).padStart(3,"0")}"></label>
+      <label for="nq-file">File Name (자동)<input id="nq-file" value="ARK-SG-26-${String(S.seq.SG).padStart(4,"0")}" disabled></label>
+      <label for="nq-date">접수일<input id="nq-date" type="date" value="${todayISO()}"></label>
+    </div>
+    <div class="actions"><button class="btn pri" id="nq-ok">등록</button><span class="note">등록하면 작업 시트가 열리고 상태(G4)가 "접수"가 됩니다. 서류 폴더도 같이 만들어집니다.</span></div>
+  </div>`;
+}
+function vWork(x){
+  const st=x.status,i=si(x);
+  const editable=st==="접수"||st==="INQUIRY";
+  const rows=x.lines.map((l,k)=>`<tr><td>${k+1}</td><td>${l.machinery}</td><td>${l.maker}</td><td>${l.type}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td>${l.origin}</td>
+    <td class="r">${editable?`<input type="number" id="w-qty${k}" value="${l.qty}" min="0" style="width:60px">`:`<span class="num">${l.qty}</span>`}</td><td>${l.unit}</td>
+    <td class="r">${st==="INQUIRY"?`<input type="number" id="w-up${k}" value="${l.uPrice}" step="100" style="width:90px">`:`<span class="num">${st==="접수"?"":won(l.uPrice)}</span>`}</td>
+    <td class="r num">${st==="접수"?"":won(l.uPrice*l.qty)}</td><td class="r num">${l.dday}</td>
+    <td class="c">${st==="INQUIRY"?`<select id="w-st${k}" style="width:70px"><option value="" ${!l.state?"selected":""}></option><option ${l.state==="견적"?"selected":""}>견적</option></select>`:st==="CONFIRM"?`<select id="w-st${k}" style="width:70px"><option value=""></option><option ${l.state==="견적"?"selected":""}>견적</option><option ${l.state==="발주"?"selected":""}>발주</option></select>`:l.state}</td>
+    <td>${l.cur}</td><td class="r">${st==="INQUIRY"?`<input type="number" id="w-buy${k}" value="${l.buy}" step="100" style="width:90px">`:`<span class="num">${st==="접수"?"":won(l.buy)}</span>`}</td>
+    <td>${editable?`<select id="w-v${k}">${VENDORS.map(v=>`<option ${v===l.vendor?"selected":""}>${v}</option>`).join("")}</select>`:l.vendor}</td></tr>`).join("");
+  let act="";
+  if(st==="접수") act=`<div class="wait info">접수 상태. 부품 줄을 확인하고 「서류_작성」을 누르면 매입처별 INQUIRY 시트가 만들어집니다 (매입처에 단가 문의).</div><div class="actions"><button class="btn pri" id="make">서류_작성</button><span class="note">만들어질 서류: INQUIRY ${[...new Set(x.lines.map(l=>l.vendor))].join(", ")}</span></div>`;
+  else if(st==="INQUIRY") act=`<div class="wait info">INQUIRY 보냄. 매입처 회신 단가를 매입단가 칸에, 판매가를 U/PRICE에 넣고 상태 칸을 "견적"으로 한 뒤 「서류_작성」 → QUOTATION이 만들어져 선사에 갑니다.</div><div class="actions"><button class="btn pri" id="make">서류_작성</button><button class="link" id="fill">시연: 단가 채우고 상태 "견적"으로</button></div>`;
+  else if(st==="QUOTATION") act=`<div class="wait"><span class="dot"></span>QUOTATION을 선사에 보냈습니다. ${x.owner} 공무감독 폰에 "새 견적 1건"이 떠 있고, 폰에서 승인하면 상태가 CONFIRM으로 바뀝니다.</div><div class="actions"><button class="link" id="fake-ok">폰이 없을 때: 여기서 대신 CONFIRM</button></div>${quoDoc(x)}`;
+  else if(st==="CONFIRM") act=`<div class="wait ok">선사가 견적을 확인(CONFIRM)했습니다. 상태 칸이 "발주"인 줄로 발주서(PURCHASE)가 매입처별로 만들어집니다. 「서류_작성」을 누르세요.</div><div class="actions"><button class="btn pri" id="make">서류_작성</button><span class="note">발주금액 K6: ${won(poAmt(x))}</span></div>`;
+  else if(st==="PURCHASE") act=`<div class="wait ok">PURCHASE 완료 · 매입처에 발주서를 보냈습니다. 이제부터는 오더관리입니다: 리본 「오더_검색」 → [발주/입고 검색] 탭에서 이 건을 발주→입고 처리합니다.</div><div class="actions"><button class="btn pri" id="go-order">오더_검색</button></div>${[...new Set(x.lines.filter(l=>l.state==="발주").map(l=>l.vendor))].map(v=>poDoc(x,v)).join("")}`;
+  else act=`<div class="wait ok">${st} · 오더관리에서 진행 중입니다.</div><div class="actions"><button class="btn" id="go-order">오더_검색</button></div>`;
+  if(x.rejected) act=`<div class="wait">선사 반려 · 사유: ${x.rejectReason}. 단가·수량을 고쳐 「서류_작성」으로 QUOTATION을 다시 보냅니다.</div><div class="actions"><button class="btn pri" id="make">서류_작성</button></div>`;
+  return `<div class="bar"><button class="btn" id="back">← ORDER LIST</button><h1>작업 시트 <span class="mono" style="font-weight:500">${x.fileName}</span></h1>${statusPill(x)}</div>
+  ${rail(x)}
+  <div class="cols"><div class="box act">
+    <dl class="kv" style="margin-bottom:10px;grid-template-columns:110px 1fr 110px 1fr"><dt>File Name</dt><dd class="mono">${x.fileName}</dd><dt>담당 직원</dt><dd>${x.emp}</dd><dt>거래처 (D7)</dt><dd>${x.owner} · ${x.ship}</dd><dt>Ref No</dt><dd class="mono">${x.refNo}</dd><dt>상태 (G4)</dt><dd><b>${x.status}</b></dd><dt>접수일</dt><dd class="num">${x.recvDate}</dd><dt>견적금액 (K5)</dt><dd class="num">${won(quoteAmt(x))}</dd><dt>발주금액 (K6)</dt><dd class="num">${won(poAmt(x))}</dd></dl>
+    <div class="tbl-wrap"><table><thead><tr><th>NO.</th><th>MACHINERY</th><th>MAKER</th><th>TYPE</th><th>PART NO</th><th>DESCRIPTION</th><th>Origin</th><th class="r">Q'TY</th><th>UNIT</th><th class="r">U/PRICE</th><th class="r">T/PRICE</th><th class="r">D.DAY</th><th class="c">상태</th><th>통화</th><th class="r">매입단가</th><th>매입처</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="margin-top:12px">${act}</div>
+  </div><div class="box"><h2>진행 기록</h2>${timeline(x)}</div></div>`;
+}
+function vOrderSearch(){
+  const tabs=[["견적","[ 견적 검색 ]",x=>["접수","INQUIRY","QUOTATION","CONFIRM"].includes(x.status)],["발주","[ 발주/입고 검색 ]",x=>x.status==="PURCHASE"],["입고","[ 입고 검색]",x=>x.status==="입고"],["납품","[ 납품 검색 ]",x=>x.status==="납품"],["통합","[ 통합 검색 ]",x=>true]];
+  const cur=tabs.find(t=>t[0]===tab)||tabs[1];
+  const list=S.orders.filter(cur[2]);
+  const hint={"발주":"발주 줄을 선택하고 「발주→입고」를 누릅니다 (엑셀에서는 오른쪽 클릭 메뉴). 입고지와 중량을 넣습니다.","입고":"입고 줄을 선택하고 「인수증」을 누릅니다. Inspection Report를 만들어 서버에 저장하면 납품이 됩니다.","납품":"납품이 끝난 건입니다. 다음은 「Additional Charge등록」에서 상태를 청구로 바꾸는 단계입니다 (시연 범위 밖).","견적":"아직 견적관리 단계인 건입니다.","통합":"전체 건입니다."}[cur[0]];
+  return `<div class="bar"><button class="btn" id="back">← ORDER LIST</button><h1>오더_검색 (오더관리)</h1></div>
+  <div class="box act"><div class="form"><div class="radios"><label><input type="radio" name="os-by" checked>매출처</label><label><input type="radio" name="os-by">선박</label></div><label>수주<select><option>ARKOR MARINE</option></select></label><label>매입처<select><option>전체</option>${VENDORS.map(v=>`<option>${v}</option>`).join("")}</select></label></div>
+    <div class="tabs" role="tablist">${tabs.map(t=>`<button role="tab" aria-selected="${t[0]===cur[0]}" data-tab="${t[0]}">${t[1]}</button>`).join("")}</div>
+    <div class="tbl-wrap"><table><thead><tr><th></th><th>File Name</th><th>매출처</th><th>선명</th><th>PART NO</th><th>DESCRIPTION</th><th class="r">Q'TY</th><th>매입처</th><th>상태</th><th>입고지</th><th class="r">중량</th></tr></thead><tbody>${
+      list.flatMap(x=>x.lines.filter(l=>l.state==="발주"||cur[0]==="견적"||cur[0]==="통합").map((l,k)=>`<tr><td class="c">${k===0?`<input type="radio" name="os-sel" value="${x.fileName}" ${openFile===x.fileName?"checked":""}>`:""}</td><td class="mono">${x.fileName}</td><td>${x.owner}</td><td>${x.ship}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td class="r num">${l.qty}</td><td>${l.vendor}</td><td>${x.status}</td><td>${x.입고지||""}</td><td class="r num">${x.중량||""}</td></tr>`)).join("")||'<tr><td colspan="11" class="note">해당 건이 없습니다.</td></tr>'
+    }</tbody></table></div>
+    <p class="note" style="margin:10px 0 0">${hint}</p>
+    <div class="actions">${cur[0]==="발주"?'<button class="btn pri" id="to-in">발주→입고</button>':cur[0]==="입고"?'<button class="btn pri" id="to-dn">인수증</button>':cur[0]==="납품"?'<button class="btn" disabled>Additional Charge등록 (다음 단계)</button>':""}<button class="btn" id="os-open">선택한 건 작업 시트 보기</button></div>
+  </div>`;
+}
+function renderWeb(){
+  const w=$("web"),x=S.orders.find(y=>y.fileName===openFile);
+  if(view==="new")w.innerHTML=vNew();
+  else if(view==="work"&&x)w.innerHTML=vWork(x);
+  else if(view==="order")w.innerHTML=vOrderSearch();
+  else{view="list";w.innerHTML=vList();}
+}
+function modal(html){$("modal-root").innerHTML=`<div class="overlay" id="ov"><div class="modal">${html}</div></div>`;}
+function closeModal(){$("modal-root").innerHTML="";}
+function readWork(x){
+  x.lines.forEach((l,k)=>{
+    const q=$("w-qty"+k),u=$("w-up"+k),b=$("w-buy"+k),s=$("w-st"+k),v=$("w-v"+k);
+    if(q)l.qty=+q.value||0;if(u)l.uPrice=+u.value||0;if(b)l.buy=+b.value||0;if(s)l.state=s.value;if(v)l.vendor=v.value;
+  });
+}
+function selectedOrder(){const r=document.querySelector('input[name="os-sel"]:checked');return r?S.orders.find(y=>y.fileName===r.value):null;}
+$("web").addEventListener("click",e=>{
+  const id=e.target.id,tr=e.target.closest("tr.click"),tb=e.target.closest("[data-tab]");
+  if(tr){view="work";openFile=tr.dataset.file;renderWeb();return;}
+  if(tb){tab=tb.dataset.tab;renderWeb();return;}
+  if(id==="new-quote"){view="new";renderWeb();return;}
+  if(id==="r-search"||id==="back"){view="list";renderWeb();return;}
+  if(id==="r-order"||id==="go-order"){view="order";tab="발주";renderWeb();return;}
+  const x=S.orders.find(y=>y.fileName===openFile);
+  if(id==="nq-ok"){
+    const ship=$("nq-ship").value,code=shipCode(ship);S.seq[code]=(S.seq[code]||1);
+    const fileName=`ARK-${code}-26-${String(S.seq[code]).padStart(4,"0")}`;S.seq[code]++;
+    const nx={fileName,refNo:$("nq-ref").value||`${code}-REQ-${String(S.seq[code]-1).padStart(3,"0")}`,owner:$("nq-owner").value,ship,emp:$("nq-emp").value,recvDate:$("nq-date").value,status:"접수",lines:[line(0,2),line(1,10),line(2,1)],events:[]};
+    nx.lines.forEach(l=>{l.uPrice=0;});
+    addEvent(nx,"접수","사무실",nx.refNo);S.orders.push(nx);view="work";openFile=fileName;toast(`${fileName} 등록 · 상태 접수`);save();return;
+  }
+  if(!x)return;
+  if(id==="fill"){x.lines.forEach((l,k)=>{l.uPrice=PARTS[k].sell;l.buy=PARTS[k].buy;l.state="견적";});toast("단가를 채우고 상태를 견적으로");save();return;}
+  if(id==="make"){
+    readWork(x);
+    if(x.rejected){x.rejected=false;x.rejectReason="";setStatus(x,"QUOTATION","사무실",won(quoteAmt(x))+" 원 · 다시 보냄");toast("QUOTATION 다시 보냄");save();return;}
+    if(x.status==="접수"){setStatus(x,"INQUIRY","사무실",[...new Set(x.lines.map(l=>l.vendor))].join(", "));toast("INQUIRY 시트 작성 · 매입처에 단가 문의");save();return;}
+    if(x.status==="INQUIRY"){
+      const ok=x.lines.filter(l=>l.state==="견적");
+      if(!ok.length||ok.some(l=>!l.uPrice)){toast("상태를 \"견적\"으로 하고 U/PRICE를 넣어 주세요");return;}
+      setStatus(x,"QUOTATION","사무실",won(quoteAmt(x))+" 원");toast(`QUOTATION 작성 · ${x.owner} 공무감독 폰에 "새 견적 1건"`);save();return;
+    }
+    if(x.status==="CONFIRM"){
+      if(!x.lines.some(l=>l.state==="발주")){toast("발주할 줄의 상태를 \"발주\"로 해 주세요");return;}
+      setStatus(x,"PURCHASE","사무실",won(poAmt(x))+" 원 · "+[...new Set(x.lines.filter(l=>l.state==="발주").map(l=>l.vendor))].join(", "));toast("PURCHASE 작성 · 매입처별 발주서 전송");save();return;
+    }
+  }
+  if(id==="fake-ok"){x.lines.forEach(l=>{if(l.state==="견적")l.state="발주";});setStatus(x,"CONFIRM","PC 대신 승인");toast("PC에서 대신 CONFIRM (시연)");save();return;}
+  if(id==="os-open"){const s=selectedOrder();if(!s){toast("건을 선택해 주세요");return;}openFile=s.fileName;view="work";renderWeb();return;}
+  if(id==="to-in"){const s=selectedOrder();if(!s){toast("발주 건을 선택해 주세요");return;}openFile=s.fileName;
+    modal(`<h2>발주→입고</h2><p class="note" style="margin:0">${s.fileName} · ${s.ship} · 발주 ${s.lines.filter(l=>l.state==="발주").length}줄</p><div class="form"><label for="in-place">입고지<select id="in-place"><option>부산 창고</option><option>사무실</option><option>직송 (선박)</option></select></label><label for="in-weight">중량 (kg)<input id="in-weight" type="number" value="5"></label><label for="in-date">입고일<input id="in-date" type="date" value="${todayISO()}"></label></div><div class="actions" style="margin:0;justify-content:flex-end"><button class="btn" id="m-cancel">취소</button><button class="btn pri" id="in-ok">입고 등록</button></div>`);return;}
+  if(id==="to-dn"){const s=selectedOrder();if(!s){toast("입고 건을 선택해 주세요");return;}openFile=s.fileName;
+    modal(`<h2>인수증 (Inspection Report)</h2><div class="sheet"><div class="h"><span>Inspection Report (검수보고서)</span><span class="mono">${s.fileName}</span></div><div class="lh">${s.owner} · ${s.ship}</div><div class="tbl-wrap"><table><thead><tr><th>NO.</th><th>PART NO</th><th>DESCRIPTION</th><th class="r">Q'TY</th><th>REMARK</th></tr></thead><tbody>${s.lines.filter(l=>l.state==="발주").map((l,k)=>`<tr><td>${k+1}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td class="r num">${l.qty}</td><td></td></tr>`).join("")}</tbody></table></div></div>
+    <div class="form"><div class="radios"><label><input type="checkbox" id="dn-dom" checked>국내 탁송</label></div><label for="dn-place">PLACE<select id="dn-place"><option>BUSAN PORT</option><option>ULSAN PORT</option><option>YEOSU PORT</option><option>INCHEON PORT</option></select></label><label for="dn-date">납품일<input id="dn-date" type="date" value="${todayISO()}"></label></div>
+    <p class="note" style="margin:0">서버 폴더 국내선사\\${s.owner}\\0.인수증 에 파일로 저장됩니다. 저장하면 납품 상태가 되고 공무감독 폰에 표시됩니다.</p><div class="actions" style="margin:0;justify-content:flex-end"><button class="btn" id="m-cancel">취소</button><button class="btn pri" id="dn-ok">서버에 파일 저장</button></div>`);return;}
+});
+$("web").addEventListener("change",e=>{const x=S.orders.find(y=>y.fileName===openFile);if(x&&view==="work"&&e.target.id&&e.target.id.startsWith("w-")){readWork(x);persist();}});
+$("modal-root").addEventListener("click",e=>{
+  const id=e.target.id,x=S.orders.find(y=>y.fileName===openFile);
+  if(id==="m-cancel"||id==="ov"){closeModal();return;}
+  if(!x)return;
+  if(id==="in-ok"){x.입고지=$("in-place").value;x.중량=+$("in-weight").value||0;x.recvIn=$("in-date").value;setStatus(x,"입고","사무실",`${x.입고지} · ${x.중량}kg`);closeModal();tab="입고";toast("입고 등록 · [입고 검색] 탭으로");save();}
+  if(id==="dn-ok"){x.place=$("dn-place").value;x.delivered=$("dn-date").value;x.domestic=$("dn-dom").checked;setStatus(x,"납품","사무실",`인수증 · ${x.place}`);closeModal();tab="납품";toast(`인수증 저장 · 납품 · ${x.ship} 폰에 표시`);save();}
+});
+
+/* ---------- 공무감독 (폰) ---------- */
+function renderMob(){
+  const o=OWNERS[0],mine=S.orders.filter(x=>x.owner===o.name);
+  const pending=mine.filter(x=>x.status==="QUOTATION"&&!x.rejected);
+  let head,body;
+  if(mView==="quote"){
+    const x=S.orders.find(y=>y.fileName===openFile);if(!x){mView="ships";return renderMob();}
+    head=`<div class="who">${o.name} · 공무감독</div><div class="t"><button class="back" id="m-back" aria-label="뒤로">‹</button><span class="mono">${x.fileName}</span></div>`;
+    body=`<div class="card"><div class="top"><span class="ship">${x.ship}</span>${statusPill(x)}</div><div class="meta">Ref No ${x.refNo} · 담당 ${x.emp} · 접수 ${x.recvDate}</div></div>
+      ${quoDoc(x)}
+      ${x.status==="QUOTATION"&&!x.rejected?`<div class="big-btns"><button class="btn" id="m-rej">반려</button><button class="btn pri" id="m-ok">승인</button></div><div class="meta">승인 = 엑셀의 CONFIRM. 사무실 작업 시트 상태가 바로 CONFIRM으로 바뀝니다.</div>`:""}
+      ${x.rejected?`<div class="banner info">반려함 · ${x.rejectReason}</div>`:""}
+      <div class="card"><b style="font-size:13px">진행</b>${rail(x,true)}${timeline(x)}</div>`;
+  }else if(mView==="reject"){
+    head=`<div class="who">${o.name} · 공무감독</div><div class="t"><button class="back" id="m-back" aria-label="뒤로">‹</button>반려 사유</div>`;
+    body=`<div class="card"><label for="m-reason">사유<select id="m-reason"><option>단가 조정 요청</option><option>수량 변경</option><option>납기(D.DAY) 변경</option><option>다른 부품으로 교체</option></select></label></div>
+      <div class="big-btns"><button class="btn" id="m-back2">취소</button><button class="btn pri" id="m-rej-ok">사무실로 돌려보내기</button></div>`;
+  }else if(mView==="ship"){
+    const list=mine.filter(x=>x.ship===mShip);
+    const cur=list.filter(x=>si(x)<DEMO_LAST&&si(x)>=1).slice(-1)[0];
+    const hist=list.filter(x=>x.status==="납품"||si(x)>DEMO_LAST).sort((a,b)=>a.delivered<b.delivered?1:-1);
+    const just=list.filter(x=>x.status==="납품").slice(-1)[0];
+    head=`<div class="who">${o.name} · 공무감독</div><div class="t"><button class="back" id="m-back" aria-label="뒤로">‹</button>${mShip}</div>`;
+    body=(cur?`<div class="card tap" data-file="${cur.fileName}"><div class="top"><span class="ship">진행 중 · <span class="mono">${cur.fileName}</span></span>${statusPill(cur)}</div>${rail(cur,true)}<b style="font-size:12.5px;margin-top:4px">발주내역 (Order Status Report)</b>${si(cur)>=4?orderStatusTable(cur,true):`<div class="meta">${cur.status} 단계 · 발주 전</div>`}${timeline(cur)}</div>`:
+      just&&just.delivered===todayISO()?`<div class="banner ok">납품 완료 · ${just.place} · 인수증 저장됨 (<span class="mono">${just.fileName}</span>)</div>`:`<div class="card"><div class="meta">진행 중인 건이 없습니다.</div></div>`)+
+      `<div class="card"><div class="top"><b style="font-size:13px">부품 이력</b><span class="meta">${hist.length}건</span></div>
+        <div class="tbl-wrap"><table><thead><tr><th>납품일</th><th>PART NO</th><th>DESCRIPTION</th><th class="r">Q'TY</th><th>PLACE</th></tr></thead><tbody>${hist.flatMap(x=>x.lines.filter(l=>l.state==="발주").map(l=>`<tr><td class="num">${x.delivered}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td class="r num">${l.qty} ${l.unit}</td><td>${x.place||""}</td></tr>`)).join("")||'<tr><td colspan="5" class="meta">아직 없습니다.</td></tr>'}</tbody></table></div></div>`;
+  }else{
+    head=`<div class="who">${o.name} (${o.kind})</div><div class="t">공무감독 · 담당 선박</div>`;
+    body=(pending.length?`<button class="banner hot" data-file="${pending[0].fileName}">새 견적 ${pending.length}건<span>보기 ›</span></button>`:"")+
+      o.ships.map(s=>{const cur=mine.filter(x=>x.ship===s&&si(x)<DEMO_LAST).slice(-1)[0];
+        return `<div class="card tap" data-ship="${s}"><div class="top"><span class="ship">${s}</span>${cur?statusPill(cur):'<span class="pill">진행 없음</span>'}</div><div class="meta">${mine.filter(x=>x.ship===s).length}건 거래 · 납품 ${mine.filter(x=>x.ship===s&&x.status==="납품").length}건</div>${cur?rail(cur,true):""}</div>`}).join("")+
+      `<div class="meta" style="text-align:center">선박을 누르면 발주내역과 부품 이력이 보입니다.</div>`;
+  }
+  $("ph-head").innerHTML=head;$("ph-body").innerHTML=body;
+}
+$("ph-body").addEventListener("click",e=>{
+  const id=e.target.id,b=e.target.closest("[data-file]"),sc=e.target.closest("[data-ship]");
+  const x=S.orders.find(y=>y.fileName===openFile);
+  if(id==="m-ok"&&x){x.lines.forEach(l=>{if(l.state==="견적")l.state="발주";});setStatus(x,"CONFIRM","공무감독 폰");toast("승인(CONFIRM) · 사무실 작업 시트가 CONFIRM으로 바뀝니다");save();return;}
+  if(id==="m-rej"){mView="reject";renderMob();return;}
+  if(id==="m-back2"){mView="quote";renderMob();return;}
+  if(id==="m-rej-ok"&&x){x.rejected=true;x.rejectReason=$("m-reason").value;addEvent(x,"CONFIRM","공무감독 폰","반려: "+x.rejectReason);mView="quote";toast("사무실로 돌려보냈습니다");save();return;}
+  if(b){openFile=b.dataset.file;mView="quote";renderMob();return;}
+  if(sc){mShip=sc.dataset.ship;mView="ship";renderMob();return;}
+});
+$("ph-head").addEventListener("click",e=>{if(e.target.id==="m-back"){mView=mView==="quote"&&mShip?"ship":"ships";if(mView==="ships")mShip=null;renderMob();}});
+
+/* ---------- 공통 ---------- */
+function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,3200);}
+function rerender(){if(role==="office")renderWeb();else if(role==="sup")renderMob();}
+function setRole(r){
+  role=r;$("role").hidden=!!r;$("web").hidden=r!=="office";$("mob").hidden=r!=="sup";
+  $("role-sw").hidden=!r;$("reset").hidden=r!=="office";
+  try{r?sessionStorage.setItem("oxen-role",r):sessionStorage.removeItem("oxen-role");}catch(e){}
+  rerender();
+}
+$("pick-office").onclick=()=>setRole("office");$("pick-sup").onclick=()=>setRole("sup");
+$("role-sw").onclick=()=>setRole(null);
+function resetDemo(){S=JSON.parse(JSON.stringify(DEFAULT));view="list";openFile=null;mView="ships";mShip=null;tab="발주";closeModal();rerender();toast("처음 상태로 돌아갑니다");persist();}
+$("reset").onclick=resetDemo;
+
+/* 저장소: 외부 호스팅(Firebase 로그인+DB, FIREBASE_CONFIG) > 외부 서버(SYNC_URL) > claude.ai 공유 저장소 > 같은 컴퓨터의 창끼리 */
+const FIREBASE_CONFIG=window.FIREBASE_CONFIG||null;
+const SYNC_URL="";
+function applyState(d){
+  if(!d||!Array.isArray(d.orders))return;
+  const editing=role==="office"&&(view==="new"||(view==="work"&&document.activeElement&&document.activeElement.tagName==="INPUT"));
+  S=d;if(!editing)rerender();
+}
+let bc=null;try{bc=new BroadcastChannel("oxen-demo");}catch(e){}
+function persistLocal(){const s=JSON.stringify(S);try{localStorage.setItem("oxen-demo-state2",s);}catch(e){}try{bc&&bc.postMessage(s);}catch(e){}}
+let restSeq=0;
+async function persist(){
+  const body=JSON.stringify(S);
+  if(FIREBASE_CONFIG){if(!fbRef)return;try{await fbRef.set(JSON.parse(body));setSync("서버 연동 (로그인됨)","ok");}catch(e){setSync("저장 안 됨","warn");}return;}
+  if(SYNC_URL){persistLocal();try{await fetch(SYNC_URL+"/state.json",{method:"PUT",headers:{"Content-Type":"application/json"},body});setSync("서버 연동","ok");}catch(e){setSync("서버 연결 안 됨","warn");}return;}
+  if(!db){persistLocal();return;}
+  try{await db.doc("demo/state2").set(JSON.parse(body));}catch(e){setSync("저장 안 됨 (보기 전용)","warn");}
+}
+async function pollRest(){
+  try{const r=await fetch(SYNC_URL+"/state.json?x="+(restSeq++),{cache:"no-store"});const d=await r.json();
+    if(d&&JSON.stringify(d)!==JSON.stringify(S))applyState(d);setSync("서버 연동","ok");}
+  catch(e){setSync("서버 연결 안 됨","warn");}
+}
+function setSync(t,cls){const s=$("sync");s.textContent=t;s.className="pill "+(cls||"");}
+
+let saved=null;try{saved=sessionStorage.getItem("oxen-role");}catch(e){}
+const isPhone=navigator.maxTouchPoints>0&&(matchMedia("(max-width:700px)").matches||Math.min(screen.width,screen.height)<=820);
+function boot(){
+  setRole(location.hash==="#office"?"office":location.hash==="#sup"?"sup":saved||null);
+  if(!role&&isPhone)toast("폰에서는 \"공무감독\"을 고릅니다");
+}
+
+/* 외부 호스팅: 로그인한 사람만 화면과 자료를 본다 (가입 화면 없음, 계정은 관리자가 만든다) */
+let fbRef=null;
+function showLogin(msg){
+  $("role").hidden=true;$("web").hidden=true;$("mob").hidden=true;$("role-sw").hidden=true;$("reset").hidden=true;
+  $("modal-root").innerHTML=`<div class="overlay"><div class="modal" style="width:360px"><h2>로그인</h2><p class="note" style="margin:0">아르코마린 ERP 웹 시연 · 허가된 계정만 들어올 수 있습니다.</p>
+    <div class="form"><label for="li-email">이메일<input id="li-email" type="email" autocomplete="username"></label><label for="li-pw">비밀번호<input id="li-pw" type="password" autocomplete="current-password"></label></div>
+    ${msg?`<div class="wait">${msg}</div>`:""}<div class="actions" style="margin:0;justify-content:flex-end"><button class="btn pri" id="li-ok">들어가기</button></div></div></div>`;
+  $("li-ok").onclick=async()=>{try{await firebase.auth().signInWithEmailAndPassword($("li-email").value.trim(),$("li-pw").value);}catch(e){showLogin("이메일이나 비밀번호가 맞지 않습니다.");}};
+  $("li-pw").onkeydown=e=>{if(e.key==="Enter")$("li-ok").click();};
+}
+function startFirebase(){
+  firebase.initializeApp(FIREBASE_CONFIG);
+  setSync("로그인 필요","warn");
+  firebase.auth().onAuthStateChanged(u=>{
+    if(!u){fbRef=null;showLogin();return;}
+    closeModal();
+    const b=document.createElement("button");b.className="btn sm";b.id="logout";b.textContent="로그아웃 ("+(u.email||"")+")";
+    if(!$("logout")){$("reset").after(b);b.onclick=()=>firebase.auth().signOut();}
+    boot();
+    fbRef=firebase.database().ref("demo/state2");
+    fbRef.on("value",snap=>{const d=snap.val();if(d&&Array.isArray(d.orders))applyState(d);else persist();setSync("서버 연동 (로그인됨)","ok");},e=>setSync("서버 연결 안 됨","warn"));
+  });
+}
+if(!FIREBASE_CONFIG)boot();
+
+(async()=>{
+  if(FIREBASE_CONFIG){startFirebase();return;}
+  if(SYNC_URL){setSync("서버 연결 중…");await pollRest();setInterval(pollRest,2000);return;}
+  try{db=await window.claude?.use?.("db");}catch(e){db=null;}
+  if(!db){
+    setSync("이 컴퓨터 안에서 연동","warn");
+    try{const s=localStorage.getItem("oxen-demo-state2");if(s)applyState(JSON.parse(s));}catch(e){}
+    if(bc)bc.onmessage=e=>{try{applyState(JSON.parse(e.data));}catch(x){}};
+    window.addEventListener("storage",e=>{if(e.key==="oxen-demo-state2"&&e.newValue){try{applyState(JSON.parse(e.newValue));}catch(x){}}});
+    return;
+  }
+  db.doc("demo/state2").onSnapshot(snap=>{
+    if(!snap.exists){setSync("실시간 연동","ok");persist();return;}
+    applyState(JSON.parse(JSON.stringify(snap.data())));
+    setSync(snap.metadata.hasPendingWrites?"저장 중…":"실시간 연동","ok");
+  },e=>setSync("연동 끊김 · 이 기기에서만","warn"));
+})();
+</script>
+</body></html>
