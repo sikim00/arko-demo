@@ -10,6 +10,7 @@
   "messagingSenderId": "24099018564",
   "appId": "1:24099018564:web:9041dda8e05212f0aa6911"
 };</script>
+<script>window.DEMO_ROLES={"sikim00@arko.com":["office"],"ihok@oxen.com":["office","sup"]};</script>
 <style>[hidden]{display:none!important}body{margin:0}</style></head><body>
 <title>아르코마린 ERP 웹 시연</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -357,10 +358,14 @@ function vOrderSearch(){
 }
 function renderWeb(){
   const w=$("web"),x=S.orders.find(y=>y.fileName===openFile);
+  const sl=[...w.querySelectorAll(".tbl-wrap")].map(e=>e.scrollLeft),ae=document.activeElement,aid=ae&&w.contains(ae)?ae.id:null,ay=window.scrollY;
   if(view==="new")w.innerHTML=vNew();
   else if(view==="work"&&x)w.innerHTML=vWork(x);
   else if(view==="order")w.innerHTML=vOrderSearch();
   else{view="list";w.innerHTML=vList();}
+  [...w.querySelectorAll(".tbl-wrap")].forEach((e,i)=>{if(sl[i])e.scrollLeft=sl[i];});
+  if(aid){const el=$(aid);if(el){el.focus({preventScroll:true});}}
+  window.scrollTo(0,ay);
 }
 function modal(html){$("modal-root").innerHTML=`<div class="overlay" id="ov"><div class="modal">${html}</div></div>`;}
 function closeModal(){$("modal-root").innerHTML="";}
@@ -427,11 +432,13 @@ function renderMob(){
   let head,body;
   if(mView==="quote"){
     const x=S.orders.find(y=>y.fileName===openFile);if(!x){mView="ships";return renderMob();}
+    if(x.status==="납품"){mView="ship";mShip=x.ship;toast("납품 완료 · 선박 화면으로");return renderMob();}
     head=`<div class="who">${o.name} · 공무감독</div><div class="t"><button class="back" id="m-back" aria-label="뒤로">‹</button><span class="mono">${x.fileName}</span></div>`;
     body=`<div class="card"><div class="top"><span class="ship">${x.ship}</span>${statusPill(x)}</div><div class="meta">Ref No ${x.refNo} · 담당 ${x.emp} · 접수 ${x.recvDate}</div></div>
       ${quoDoc(x)}
       ${x.status==="QUOTATION"&&!x.rejected?`<div class="big-btns"><button class="btn" id="m-rej">반려</button><button class="btn pri" id="m-ok">승인</button></div><div class="meta">승인 = 엑셀의 CONFIRM. 사무실 작업 시트 상태가 바로 CONFIRM으로 바뀝니다.</div>`:""}
       ${x.rejected?`<div class="banner info">반려함 · ${x.rejectReason}</div>`:""}
+      ${si(x)>=3&&si(x)<DEMO_LAST?`<button class="banner ok" data-ship="${x.ship}">승인 완료 · 발주내역은 선박 화면에서<span>${x.ship} ›</span></button>`:""}
       <div class="card"><b style="font-size:13px">진행</b>${rail(x,true)}${timeline(x)}</div>`;
   }else if(mView==="reject"){
     head=`<div class="who">${o.name} · 공무감독</div><div class="t"><button class="back" id="m-back" aria-label="뒤로">‹</button>반려 사유</div>`;
@@ -471,9 +478,17 @@ $("ph-head").addEventListener("click",e=>{if(e.target.id==="m-back"){mView=mView
 /* ---------- 공통 ---------- */
 function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,3200);}
 function rerender(){if(role==="office")renderWeb();else if(role==="sup")renderMob();}
+/* 계정별 권한: window.DEMO_ROLES = {"이메일":["office"|"sup",...]} · 없는 계정은 둘 다 */
+let allowed=["office","sup"];
+function setAllowed(a){
+  allowed=Array.isArray(a)&&a.length?a:["office","sup"];
+  $("pick-office").hidden=!allowed.includes("office");$("pick-sup").hidden=!allowed.includes("sup");
+}
 function setRole(r){
+  if(r&&!allowed.includes(r))r=allowed.length===1?allowed[0]:null;
+  if(!r&&allowed.length===1)r=allowed[0];
   role=r;$("role").hidden=!!r;$("web").hidden=r!=="office";$("mob").hidden=r!=="sup";
-  $("role-sw").hidden=!r;$("reset").hidden=r!=="office";
+  $("role-sw").hidden=!r||allowed.length<2;$("reset").hidden=r!=="office";
   try{r?sessionStorage.setItem("oxen-role",r):sessionStorage.removeItem("oxen-role");}catch(e){}
   rerender();
 }
@@ -487,7 +502,8 @@ const FIREBASE_CONFIG=window.FIREBASE_CONFIG||null;
 const SYNC_URL="";
 function applyState(d){
   if(!d||!Array.isArray(d.orders))return;
-  const editing=role==="office"&&(view==="new"||(view==="work"&&document.activeElement&&document.activeElement.tagName==="INPUT"));
+  if(JSON.stringify(d)===JSON.stringify(S))return;
+  const ae=document.activeElement,editing=role==="office"&&(view==="new"||(view==="work"&&ae&&(ae.tagName==="INPUT"||ae.tagName==="SELECT")));
   S=d;if(!editing)rerender();
 }
 let bc=null;try{bc=new BroadcastChannel("oxen-demo");}catch(e){}
@@ -530,6 +546,7 @@ function startFirebase(){
   firebase.auth().onAuthStateChanged(u=>{
     if(!u){fbRef=null;showLogin();return;}
     closeModal();
+    setAllowed((window.DEMO_ROLES||{})[(u.email||"").toLowerCase()]);
     const b=document.createElement("button");b.className="btn sm";b.id="logout";b.textContent="로그아웃 ("+(u.email||"")+")";
     if(!$("logout")){$("reset").after(b);b.onclick=()=>firebase.auth().signOut();}
     boot();
