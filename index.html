@@ -176,8 +176,8 @@ table input,table select{padding:4px 6px;font-size:12.5px}
 <div id="role" class="role">
   <div><h1>어느 쪽 화면을 볼까요?</h1><p class="sub">사무실은 PC에서, 선사 공무감독은 폰에서 고릅니다. 두 화면은 같은 자료를 봅니다.</p></div>
   <div class="role-grid">
-    <button class="role-card" id="pick-office"><b>사무실</b><span>옥슨 · 견적관리(견적서류 등록, 서류_작성) → 오더관리(입고, 인수증)</span></button>
-    <button class="role-card" id="pick-sup"><b>공무감독</b><span>선사 ARKOR MARINE · 담당 선박의 견적(QUOTATION) 확인·승인, 발주내역·부품 이력</span></button>
+    <button class="role-card" id="pick-office"><b>사무실</b><span>아르코마린-견적관리 (견적서류 등록 → 서류_작성 ×4) → ENI - 오더관리 (오더_검색 우클릭: 입고 → 인수증)</span></button>
+    <button class="role-card" id="pick-sup"><b>공무감독</b><span>선사 ARKOR MARINE 박공무 감독 · QUOTATION 확인 → 발주 확인 회신, 발주내역·부품 이력</span></button>
   </div>
 </div>
 <div id="web" class="web" hidden></div>
@@ -189,10 +189,10 @@ table input,table select{padding:4px 6px;font-size:12.5px}
   <div class="aside-note">
     <h2>선사 공무감독이 폰으로 보는 화면</h2>
     <ol>
-      <li>사무실이 QUOTATION을 보내면 폰 맨 위에 "새 견적 1건"이 뜹니다.</li>
-      <li>견적서(QUOTATION 서식 그대로)를 보고 "승인"을 누릅니다. 엑셀의 CONFIRM 단계입니다.</li>
-      <li>그 순간 사무실 작업 시트 상태가 CONFIRM으로 바뀝니다.</li>
-      <li>선박을 누르면 발주내역(Order Status Report)과 부품 이력을 봅니다.</li>
+      <li>사무실이 QUOTATION 시트를 만들면 폰 맨 위에 "새 견적 1건"이 뜹니다. (엑셀에서는 E-Mail_발송)</li>
+      <li>견적서를 보고 "승인 (발주 확인)"을 누르면 사무실 작업 시트 N열이 "발주"가 됩니다. (엑셀에서는 메일 회신을 보고 사무실이 직접 바꿉니다)</li>
+      <li>사무실이 「서류_작성」을 누르면 CONFIRM (SALES CONFIRM, 발주No)이 됩니다.</li>
+      <li>선박을 누르면 발주내역과 부품 이력을 봅니다.</li>
     </ol>
     <p class="note">실제 폰으로 열면 이 화면만 전체로 뜹니다.</p>
   </div>
@@ -206,41 +206,67 @@ const won=n=>Math.round(n).toLocaleString("ko-KR");
 const todayISO=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
 const stamp=()=>{const d=new Date();return d.toLocaleDateString("ko-KR",{month:"numeric",day:"numeric"})+" "+d.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});};
 
-/* 상태: 견적관리 작업시트 G4 (접수→INQUIRY→QUOTATION→CONFIRM→PURCHASE) → 오더관리 (입고→납품→청구) → 청구·자금관리 (회색) */
+/* 상태 (원본 그대로)
+   오더 상태 ORDER상태 (작업 시트 G4): 접수 → INQUIRY → QUOTATION → CONFIRM → PURCHASE  (서류_작성 한 번에 한 단계)
+   품목 상태 QUO상태 (작업 시트 N열): 삭제 · 접수 · 견적 · 발주 · 입고 · 납품 · 미정 · 청구  (오더관리 화면은 품목 상태만 본다)
+   시연 진행선은 오더 상태 5단계 + 품목 상태(입고·납품) + 그 뒤(청구·결재·계산서·입금, 회색) */
 const ST=["접수","INQUIRY","QUOTATION","CONFIRM","PURCHASE","입고","납품","청구","결재","계산서","입금"];
-const DEMO_LAST=6; // 납품까지 시연, 그 뒤는 회색
-const WHO={"접수":"사무실 · 견적서류 등록","INQUIRY":"사무실 · 서류_작성","QUOTATION":"사무실 · 서류_작성","CONFIRM":"선사 공무감독 · 폰","PURCHASE":"사무실 · 서류_작성","입고":"사무실 · 오더_검색","납품":"사무실 · 인수증","청구":"Additional Charge 등록","결재":"청구관리 기안·검토·결재","계산서":"청구관리 계산서 처리","입금":"자금관리 미수금"};
-/* 테스트 DB 기준정보 (테스트용_바로실행\ENI.accdb) */
-const OWNERS=[{name:"ARKOR MARINE",kind:"국내 · 선주",ships:["SEIN GRACE","SEIN PHOENIX"]}];
-const EMPS=["테스트대표","테스트과장"];
+const DEMO_LAST=6;
+const WHO={"접수":"견적관리 · 견적서류 등록","INQUIRY":"견적관리 · 서류_작성","QUOTATION":"견적관리 · 서류_작성","CONFIRM":"선사 회신(폰) → 견적관리 · 서류_작성","PURCHASE":"견적관리 · 서류_작성","입고":"오더관리 · 오더_검색 [발주] 우클릭","납품":"오더관리 · 오더_검색 [입고] 우클릭 인수증","청구":"오더관리 · Additional Charge등록","결재":"청구관리 · 기안/검토/결재","계산서":"청구관리 · 계산서 관리","입금":"자금관리 · 미수금_목록"};
+const G4=x=>ST.indexOf(x.status)<=4?x.status:"PURCHASE";
+const N_LIST=["삭제","접수","견적","발주"];
+/* 테스트 DB 기준정보 (테스트용_바로실행\ENI.accdb 의 실제 행) */
+const CUSTOMERS=[
+  {해외:"",딜러:"",선사:"●",거래처명:"ARKOR MARINE",선명:"SEIN GRACE",선주명:"ARKOR MARINE",거래처빌:"ARK",선박빌:"SG",TEL:"051-111-1111",담당자HP:"",선박ID:2,담당자:"박공무 감독",EMAIL1:"super@example.com"},
+  {해외:"",딜러:"",선사:"●",거래처명:"ARKOR MARINE",선명:"SEIN PHOENIX",선주명:"ARKOR MARINE",거래처빌:"ARK",선박빌:"SP",TEL:"051-111-1111",담당자HP:"",선박ID:3,담당자:"박공무 감독",EMAIL1:"super@example.com"},
+  {해외:"",딜러:"",선사:"●",거래처명:"테스트해운",선명:"TEST VESSEL",선주명:"테스트선주",거래처빌:"TST",선박빌:"TV",TEL:"051-000-0001",담당자HP:"",선박ID:1,담당자:"김테스트",EMAIL1:"customer@example.com"}
+];
+const OWNERS=[{name:"ARKOR MARINE",kind:"국내 · 선사",ships:["SEIN GRACE","SEIN PHOENIX"],super:"박공무 감독"}];
+const EMPS=["테스트대표 대표이사","테스트과장 과장"];
 const VENDORS=["부산선박부품","한국마린서플라이"];
+const DEPTS=["DECK","ENGINE","GALLEY"];
 const PARTS=[
   {machinery:"MAIN ENGINE",maker:"HYUNDAI-B&W",type:"6S50MC-C",partNo:"90310-01",desc:"FUEL VALVE NOZZLE",origin:"KOREA",unit:"PCS",dday:7,buy:47500,sell:65000,vendor:"부산선박부품"},
-  {machinery:"MAIN ENGINE",maker:"HYUNDAI-B&W",type:"6S50MC-C",partNo:"90501-12",desc:"O-RING 1/2\"",origin:"KOREA",unit:"PCS",dday:7,buy:500,sell:700,vendor:"부산선박부품"},
+  {machinery:"MAIN ENGINE",maker:"HYUNDAI-B&W",type:"6S50MC-C",partNo:"90501-12",desc:"O-RING 1/2\" FOR CYL. COVER",origin:"KOREA",unit:"PCS",dday:7,buy:500,sell:700,vendor:"부산선박부품"},
   {machinery:"GENERATOR ENGINE",maker:"HIMSEN",type:"6H21/32",partNo:"H21-0703",desc:"PISTON RING SET",origin:"KOREA",unit:"SET",dday:14,buy:190000,sell:400000,vendor:"한국마린서플라이"}
 ];
-const line=(p,qty,state)=>({...PARTS[p],qty,uPrice:PARTS[p].sell,cur:"KRW",state:state||""});
-function past(fileName,refNo,ship,date,lines,place){
-  return {fileName,refNo,owner:"ARKOR MARINE",ship,emp:"테스트과장",recvDate:date,status:"납품",lines:lines.map(([p,q])=>line(p,q,"발주")),입고지:"부산 창고",중량:5,place,delivered:date,events:[]};
+const ROOT="루트";
+const line=(p,qty,state)=>{const P=PARTS[p];return {machinery:P.machinery,maker:P.maker,type:P.type,partNo:P.partNo,desc:P.desc,origin:P.origin,qty,unit:P.unit,uPrice:0,dday:P.dday,state:state||"접수",cur:"",buy:0,vendor:"",remark:"",v1:{cur:"KRW",price:0,name:P.vendor}};};
+function past(fileName,orderId,poNo,refNo,ship,bill,date,lines,place,inPlace){
+  const ls=lines.map(([p,q])=>{const l=line(p,q,"납품");l.uPrice=PARTS[p].sell;l.cur="KRW";l.buy=PARTS[p].buy;l.vendor=PARTS[p].vendor;l.v1.price=PARTS[p].buy;l.inDate=date;l.inPlace=inPlace;l.weight=5;l.dnDate=date;l.place=place;return l;});
+  return {fileName,orderId,refNo,owner:"ARKOR MARINE",ship,ownerBill:"ARK",shipBill:bill,emp:"테스트과장 과장",recvDate:date,quoDate:date,poDate:date,poNo,dept:"ENGINE",area:"국내 업체",dealer:"일반 업체",payment:"선주사 결제",status:"납품",lines:ls,events:[],sheets:["작업"],saved:[]};
 }
 const PAST=[
-  past("ARK-SG-26-0001","SG-REQ-001","SEIN GRACE","2026-07-14",[[0,2],[1,10]],"BUSAN PORT"),
-  past("ARK-SG-26-0002","SG-REQ-002","SEIN GRACE","2026-08-22",[[2,1]],"ULSAN PORT"),
-  past("ARK-SP-26-0001","SP-REQ-001","SEIN PHOENIX","2026-09-18",[[0,4]],"BUSAN PORT")
+  past("ARK-SG-26-0001",1,"ARK-SG-26-0001","SG-REQ-001","SEIN GRACE","SG","2026-07-14",[[0,2],[1,10]],"BUSAN PORT","옥슨앤사무실"),
+  past("ARK-SG-26-0002",2,"ARK-SG-26-0002","SG-REQ-002","SEIN GRACE","SG","2026-08-22",[[2,1]],"ULSAN PORT","부산 창고"),
+  past("ARK-SP-26-0001",3,"ARK-SP-26-0003","SP-REQ-001","SEIN PHOENIX","SP","2026-09-18",[[0,4]],"BUSAN PORT","옥슨앤사무실")
 ];
-const DEFAULT={orders:PAST,seq:{SG:3,SP:2}};
+const DEFAULT={orders:PAST,seq:{order:4,po:4}};
 let S=JSON.parse(JSON.stringify(DEFAULT));
-let role=null,view="list",openFile=null,tab="발주",mView="ships",mShip=null,db=null,tt;
+let role=null,view="list",prog="quo",openFile=null,tab="발주",mView="ships",mShip=null,db=null,tt,nqSel=null,showSheet=null;
 
 const si=x=>ST.indexOf(x.status);
-const quoteAmt=x=>x.lines.filter(l=>l.state==="견적"||l.state==="발주").reduce((s,l)=>s+l.uPrice*l.qty,0);
-const poAmt=x=>x.lines.filter(l=>l.state==="발주").reduce((s,l)=>s+l.buy*l.qty,0);
-const shipCode=s=>s.split(" ").map(w=>w[0]).join("").toUpperCase();
+const quoteAmt=x=>x.lines.filter(l=>l.state!=="삭제"&&l.state!=="접수").reduce((s,l)=>s+l.uPrice*l.qty,0);
+const poLines=x=>x.lines.filter(l=>["발주","입고","납품"].includes(l.state));
+const poAmt=x=>poLines(x).reduce((s,l)=>s+l.uPrice*l.qty,0);
+const buyAmt=x=>poLines(x).reduce((s,l)=>s+l.buy*l.qty,0);
+const yy=()=>String(new Date().getFullYear()).slice(2);
+const md=d=>d?`${+d.slice(5,7)}/${+d.slice(8,10)}`:"";
+const addDays=(d,n)=>{const t=new Date(d+"T00:00:00");t.setDate(t.getDate()+n);return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");};
+const folder=x=>`${ROOT}\\국내선사\\${x.owner}\\${x.ship}`;
 function save(){rerender();persist();}
 function addEvent(x,status,by,note){x.events=(x.events||[]).concat([{status,at:stamp(),by,note:note||""}]);}
 function setStatus(x,st,by,note){x.status=st;addEvent(x,st,by,note);}
+function addSheet(x,name){x.sheets=x.sheets||["작업"];if(!x.sheets.includes(name))x.sheets.push(name);showSheet=name;}
+/* 원본 규칙: N열을 견적/발주로 바꿀 때 Q(매입처)가 비어 있으면 S:U(매입처1)를 O:Q로 복사 */
+function applyVendorRule(l){if((l.state==="견적"||l.state==="발주")&&!l.vendor&&l.v1.name){l.vendor=l.v1.name;l.buy=l.v1.price;l.cur=l.v1.cur;}else if(l.state!=="견적"&&l.state!=="발주"&&l.state!=="입고"&&l.state!=="납품"){l.vendor="";l.buy=0;l.cur="";}}
+/* 품목 상태로 진행선 단계 갱신 (G4는 PURCHASE에서 멈춤) */
+function syncItemStage(x){
+  const ls=poLines(x);if(!ls.length||si(x)<4)return;
+  if(ls.every(l=>l.state==="납품"))x.status="납품";else if(ls.every(l=>l.state!=="발주"))x.status="입고";else x.status="PURCHASE";
+}
 
-/* 폰 진행 줄: 선사가 보는 이름 (QUOTATION→견적, CONFIRM→승인, PURCHASE→발주, 입고, 납품) */
+/* 폰 진행 줄 */
 const PH_RAIL=[["QUOTATION","견적"],["CONFIRM","승인"],["PURCHASE","발주"],["입고","입고"],["납품","납품"]];
 function rail(x,small){
   const i=si(x);
@@ -252,14 +278,14 @@ function rail(x,small){
   return `<div class="rail">${ST.map((s,k)=>{
     const later=k>DEMO_LAST,done=k<i||(k===i&&i>=DEMO_LAST),now=k===i&&i<DEMO_LAST;
     const rej=x.rejected&&s==="CONFIRM";
-    return `<div class="${later?"later":rej?"rej":done?"done":now?"now":""}" title="${WHO[s]}">${s}</div>`}).join("")}</div>`;
+    return `<div class="${later?"later":rej?"rej":done?"done":now?"now":""}" title="${WHO[s]}">${k>=5&&k<=6?"품목 "+s:s}</div>`}).join("")}</div>`;
 }
 function timeline(x){
   const i=si(x);
   return `<ul class="vtl">${ST.map((s,k)=>{
-    const later=k>DEMO_LAST,ev=(x.events||[]).find(e=>e.status===s);
-    const cls=later?"later":k<=i&&ev?"done":k===i?"now":"";
-    const d=later?"다음 단계 (시연 범위 밖)":ev?`${ev.at}${ev.note?" · "+ev.note:""}`:k===i?"지금 단계":"예정";
+    const later=k>DEMO_LAST,evs=(x.events||[]).filter(e=>e.status===s);
+    const cls=later?"later":k<=i&&evs.length?"done":k===i?"now":"";
+    const d=later?"다음 단계 (시연 범위 밖)":evs.length?evs.map(ev=>`${ev.at} · ${ev.by}${ev.note?" · "+ev.note:""}`).join("<br>"):k===i?"지금 단계":"예정";
     return `<li class="${cls}">${s}<span class="by">${WHO[s]}</span><div class="d">${d}</div></li>`}).join("")}</ul>`;
 }
 function statusPill(x){
@@ -267,93 +293,174 @@ function statusPill(x){
   const c=x.status==="QUOTATION"?"hot":x.status==="납품"?"ok":"";
   return `<span class="pill ${c}">${x.status}</span>`;
 }
-/* 서식 표: QUOTATION / 발주내역 / 인수증 */
+
+/* ---------- 서식 시트 (원본 시트 머리·열 그대로) ---------- */
+const docHead=(title,x,extra)=>`<div class="sheet"><div class="h"><span>${title}</span><span class="mono">${x.fileName}</span></div><div class="lh">${extra||""}</div>`;
+function inqDoc(x,vendor){
+  const ls=x.lines.filter(l=>l.state!=="삭제"&&l.v1.name===vendor);
+  return docHead(`${vendor} (시트) · D5 INQUIRY`,x,`TO: ${vendor} · 2. Please offer your best price as below items.`)+`<div class="tbl-wrap"><table><thead><tr><th>No.</th><th>Part No.</th><th>Description</th><th>Origin</th><th class="r">Q'ty</th><th>UT</th><th class="r">Day</th></tr></thead><tbody>${ls.map((l,i)=>`<tr><td>${i+1}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td>${l.origin}</td><td class="r num">${l.qty}</td><td>${l.unit}</td><td class="r num">${l.dday}</td></tr>`).join("")}</tbody></table></div></div>`;
+}
 function quoDoc(x){
-  const ls=x.lines.filter(l=>l.state);
-  return `<div class="sheet"><div class="h"><span>QUOTATION</span><span class="mono">${x.fileName}</span></div><div class="lh">ARKOR MARINE · 2nd Floor KAL bldg., 146, Jungang-daero, Jung-gu, Busan · Ref No ${x.refNo} · ${x.ship}</div>
-  <div class="tbl-wrap"><table><thead><tr><th>No.</th><th>Part No.</th><th>Description</th><th>Origin</th><th class="r">Q'ty</th><th>UT</th><th class="r">U/Price</th><th class="r">T/Price</th><th class="r">Day</th></tr></thead><tbody>${
+  const ls=x.lines.filter(l=>l.state!=="삭제"&&l.state!=="접수");
+  return docHead("QUOTATION (시트) · D5 QUOTATION",x,`${x.owner} · 2nd Floor KAL bldg., 146, Jungang-daero, Jung-gu, Busan · Request No. ${x.refNo} · ${x.ship}`)+`<div class="tbl-wrap"><table><thead><tr><th>No.</th><th>Part No.</th><th>Description</th><th>Origin</th><th class="r">Q'ty</th><th>UT</th><th class="r">U/Price</th><th class="r">T/Price</th><th class="r">Day</th></tr></thead><tbody>${
     ls.map((l,i)=>`<tr><td>${i+1}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td>${l.origin}</td><td class="r num">${l.qty}</td><td>${l.unit}</td><td class="r num">${won(l.uPrice)}</td><td class="r num">${won(l.uPrice*l.qty)}</td><td class="r num">${l.dday}</td></tr>`).join("")
-  }</tbody></table></div><div class="total"><span>TOTAL (KRW) <b class="num">${won(quoteAmt(x))}</b></span></div></div>`;
+  }</tbody></table></div><div class="total"><span>TOTAL (KRW) <b class="num">${won(quoteAmt(x))}</b></span></div><div class="lh">## REMARK ## · ## Definition of Origin: EQ - EQUIVALENT PARTS / OEM / GEN - GENUINE … · 1) 2) 3) 4)</div></div>`;
+}
+function confDoc(x){
+  const ls=poLines(x);
+  return docHead("CONFIRM (시트) · D5 SALES CONFIRM",x,`OUR P.O# ${x.poNo} · 발주일자 ${x.poDate} · 품목 상태 "발주"만 포함`)+`<div class="tbl-wrap"><table><thead><tr><th>No.</th><th>Part No.</th><th>Description</th><th class="r">Q'ty</th><th>UT</th><th class="r">U/Price</th><th class="r">T/Price</th><th class="r">Day</th></tr></thead><tbody>${
+    ls.map((l,i)=>`<tr><td>${i+1}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td class="r num">${l.qty}</td><td>${l.unit}</td><td class="r num">${won(l.uPrice)}</td><td class="r num">${won(l.uPrice*l.qty)}</td><td class="r num">${l.dday}</td></tr>`).join("")
+  }</tbody></table></div><div class="total"><span>발주합계 (K8) <b class="num">${won(poAmt(x))}</b></span></div></div>`;
 }
 function poDoc(x,vendor){
-  const ls=x.lines.filter(l=>l.state==="발주"&&l.vendor===vendor);
-  return `<div class="sheet"><div class="h"><span>PURCHASE ORDER · ${vendor}</span><span class="mono">${x.fileName}</span></div>
-  <div class="tbl-wrap"><table><thead><tr><th>No.</th><th>Part No.</th><th>Description</th><th class="r">Q'ty</th><th>UT</th><th class="r">U/Price</th><th class="r">T/Price</th><th class="r">Day</th></tr></thead><tbody>${
+  const ls=poLines(x).filter(l=>l.vendor===vendor);
+  return docHead(`${vendor} (시트) · D5 PURCHASE ORDER`,x,`OUR P.O# ${x.poNo} · 시트 위 버튼 「매입금액 및 매입Discount / 매입장 등록」(시연 범위 밖)`)+`<div class="tbl-wrap"><table><thead><tr><th>No.</th><th>Part No.</th><th>Description</th><th class="r">Q'ty</th><th>UT</th><th class="r">U/Price</th><th class="r">T/Price</th><th class="r">Day</th></tr></thead><tbody>${
     ls.map((l,i)=>`<tr><td>${i+1}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td class="r num">${l.qty}</td><td>${l.unit}</td><td class="r num">${won(l.buy)}</td><td class="r num">${won(l.buy*l.qty)}</td><td class="r num">${l.dday}</td></tr>`).join("")
-  }</tbody></table></div><div class="total"><span>발주 합계 <b class="num">${won(ls.reduce((s,l)=>s+l.buy*l.qty,0))}</b></span></div></div>`;
+  }</tbody></table></div><div class="total"><span>매입합계 <b class="num">${won(ls.reduce((s,l)=>s+l.buy*l.qty,0))}</b></span></div></div>`;
 }
+/* 발주내역 (발주내역서 만들기): A8 VESSEL NAME : · D7 DATE: · 열 NO. | PART NO | DESCRIPTION | Q'TY | 재고(입고예정일) | Remark | 매입처 | 견적상태 | 입고(예정)일 */
 function orderStatusTable(x,forShip){
-  const ls=x.lines.filter(l=>l.state==="발주");
-  const i=si(x);
-  return `<div class="tbl-wrap"><table><thead><tr><th>NO.</th><th>PART NO</th><th>DESCRIPTION</th><th class="r">Q'TY</th><th>재고 (입고예정일)</th><th>Remark</th>${forShip?"":"<th>매입처</th>"}<th>견적상태</th><th>입고(예정)일</th></tr></thead><tbody>${
-    ls.map((l,k)=>`<tr><td>${k+1}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td class="r num">${l.qty}</td><td>${i>=5?"입고":"D+"+l.dday}</td><td></td>${forShip?"":`<td>${l.vendor}</td>`}<td>${x.status}</td><td class="num">${x.recvIn||""}</td></tr>`).join("")
+  const ls=poLines(x);
+  return `<div class="tbl-wrap"><table><thead><tr><th>NO.</th><th>PART NO</th><th>DESCRIPTION</th><th class="r">Q'TY</th><th>재고(입고예정일)</th><th>Remark</th>${forShip?"":"<th>매입처</th>"}<th>견적상태</th><th>입고(예정)일</th></tr></thead><tbody>${
+    ls.map((l,k)=>{const due=addDays(x.poDate||x.recvDate,l.dday);const got=l.state!=="발주";return `<tr><td>${k+1}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td class="r num">${l.qty} ${l.unit}</td><td>${got?`${l.inPlace||""} 준비완료`:`${due} 준비예정`}</td><td>${l.remark||""}</td>${forShip?"":`<td>${l.vendor}</td>`}<td>${l.state}</td><td class="num">${got?l.inDate:due}</td></tr>`}).join("")
   }</tbody></table></div>`;
 }
+function orderListDoc(x){
+  return docHead(`${x.ship} (시트) · 발주내역`,x,`VESSEL NAME : ${x.ship} · DATE: ${todayISO()} · REF NO. : ${x.refNo} · ORDER DATE. : ${x.poDate} · ORDER NO. : ${x.poNo}`)+orderStatusTable(x,false)+`</div>`;
+}
+/* 인수증: A8 VESSEL NAME : · D7 DATE: · D8 PLACE: · 열 NO. | PART NO | DESCRIPTION | Q'TY | REAMRK (원본 철자) · 서명란 MASTER / CHIEF ENGINEER */
+function receiptDoc(x){
+  const ls=x.lines.filter(l=>l.state==="납품");const l0=ls[0]||{};
+  return docHead(`${x.ship} (시트) · 인수증`,x,`VESSEL NAME : ${x.ship} · DATE: ${l0.dnDate||""} · PLACE: ${l0.place||""}`)+`<div class="lh">MACHNERY: ${l0.machinery||""} · MAKER: ${l0.maker||""} · TYPE: ${l0.type||""}</div><div class="tbl-wrap"><table><thead><tr><th>NO.</th><th>PART NO</th><th>DESCRIPTION</th><th class="r">Q'TY</th><th>REAMRK</th></tr></thead><tbody>${ls.map((l,k)=>`<tr><td>${k+1}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td class="r num">${l.qty} ${l.unit}</td><td>${l.remark||""}</td></tr>`).join("")}</tbody></table></div><div class="total"><span>MASTER / CHIEF ENGINEER ____________</span></div></div>`;
+}
+function sheetDoc(x,name){
+  if(name==="QUOTATION")return quoDoc(x);if(name==="CONFIRM")return confDoc(x);
+  if(name.endsWith(" (INQUIRY)"))return inqDoc(x,name.replace(" (INQUIRY)",""));
+  if(name.endsWith(" (PURCHASE ORDER)"))return poDoc(x,name.replace(" (PURCHASE ORDER)",""));
+  if(name.endsWith(" (발주내역)"))return orderListDoc(x);if(name.endsWith(" (인수증)"))return receiptDoc(x);return "";
+}
+function sheetTabs(x){
+  const sh=x.sheets||["작업"];if(sh.length<2)return "";
+  const cur=showSheet&&sh.includes(showSheet)?showSheet:sh[sh.length-1];
+  return `<div class="tabs" role="tablist" style="margin-top:12px">${sh.map(s=>`<button role="tab" aria-selected="${s===cur}" data-sheet="${s}">${s}</button>`).join("")}</div>${cur==="작업"?'<p class="note">작업 시트는 위에 있습니다.</p>':sheetDoc(x,cur)}`;
+}
 
-/* ---------- 사무실 (PC) ---------- */
+/* ---------- 사무실 (PC): 프로그램 탭 = 원본 리본 탭 이름 ---------- */
+function progTabs(){
+  const P=[["quo","아르코마린-견적관리"],["ord","ENI - 오더관리"],["bil","ENI - 청구,결제 관리"],["fin","ENI - 자금관리"],["dbm","ENI - Database관리"]];
+  return `<div class="tabs" role="tablist" style="margin:0">${P.map(([k,n])=>`<button role="tab" aria-selected="${k===prog}" data-prog="${k}" ${k==="bil"||k==="fin"||k==="dbm"?'disabled title="시연 범위 밖"':""}>${n}</button>`).join("")}</div>`;
+}
+const B=(id,label,on,extra)=>`<button class="btn sm${on?" pri":""}" id="${id}" ${on?"":'disabled title="시연 범위 밖 (원본 버튼)"'} ${extra||""}>${label}</button>`;
+function ribbonQuo(x){
+  const st=x?x.status:null,inWork=view==="work"&&x;
+  return `<div class="ribbon"><span class="grp">QUO</span>${B("new-quote","견적서류 등록",true)}${B("r-search","견적서류 검색",true)}<span class="sep"></span><span class="grp">견적서 작성(재출력/환원), 메일발송, 출력, 저장</span>${B("make","서류_작성",inWork&&si(x)<=4)}${B("remake","서류(견적서) 재작성",inWork&&si(x)<=4&&st!=="접수")}${B("revert","이전 견적단계로 환원",inWork&&si(x)<=4)}${B("r-mail","E-Mail_발송",false)}${B("r-print","프린터 출력",false)}${B("r-backup","서버에 Backup 저장",false)}</div>`;
+}
+function ribbonOrd(x){
+  const has=x&&(x.sheets||[]).some(s=>s.endsWith(" (인수증)")||s.endsWith(" (발주내역)"));
+  return `<div class="ribbon"><span class="grp">ORDER LIST</span>${B("ol-refresh","OrderList 시트 새로고침",true)}${B("mk-ol","발주내역서 만들기",view==="order")}<span class="sep"></span><span class="grp">상세 검색/상태 변경</span>${B("r-order","오더_검색",true)}${B("r-addc","Additional Charge등록",false)}${B("r-return","반려/환원 문서 관리",false)}<span class="sep"></span><span class="grp">메일발송/시트인쇄/파일저장</span>${B("r-label","라벨_출력",false)}${B("r-email","eMail_보내기",false)}${B("r-sheetprint","시트_출력",false)}${B("srv-save"," 서버에 파일 저장",!!has)}</div>`;
+}
+/* 견적관리 홈 = 견적서류 검색 (frmQuoList) */
 function vList(){
   const rows=[...S.orders].reverse();
-  return `<div class="ribbon"><span class="grp">견적관리</span><button class="btn pri sm" id="new-quote">견적서류 등록</button><button class="btn sm" id="r-search">견적서류 검색</button><span class="sep"></span><span class="grp">오더관리</span><button class="btn sm" id="r-order">오더_검색</button><button class="btn sm" disabled title="다음 단계">Additional Charge등록</button><span class="sep"></span><span class="grp">청구관리 · 자금관리 · DB관리</span><button class="btn sm" disabled>기안 문서 조회</button><button class="btn sm" disabled>미수금_목록</button><button class="btn sm" disabled>대량이체 등록</button></div>
-  <div class="box"><h2>ORDER LIST</h2><div class="tbl-wrap"><table><thead><tr><th>담당자</th><th>매출처</th><th>선명</th><th>File Name</th><th>Ref No</th><th>접수일</th><th>상태</th><th class="r">견적금액</th><th class="r">발주금액</th></tr></thead><tbody>${
-    rows.map(x=>`<tr class="click" data-file="${x.fileName}"><td>${x.emp}</td><td>${x.owner}</td><td>${x.ship}</td><td class="mono">${x.fileName}</td><td class="mono">${x.refNo}</td><td class="num">${x.recvDate}</td><td>${statusPill(x)}</td><td class="r num">${won(quoteAmt(x))}</td><td class="r num">${won(poAmt(x))}</td></tr>`).join("")
-  }</tbody></table></div><p class="note">줄을 누르면 작업 시트가 열립니다. 「견적서류 등록」이 엑셀 리본의 첫 버튼입니다.</p></div>`;
+  const cnt={};S.orders.forEach(x=>{const g=G4(x);cnt[g]=(cnt[g]||0)+1;});
+  return progTabs()+ribbonQuo(null)+`<div class="box"><h2>견적서류 검색 <span class="note">DB 전체 Data · Ref No 검색 · 새로고침</span></h2>
+  <p class="note" style="margin:0 0 8px">상태 ( 건수 ): ${["접수","INQUIRY","QUOTATION","CONFIRM","PURCHASE"].map(s=>`${s} ( ${cnt[s]||0} )`).join(" · ")} — 녹색 텍스트박스에 Ref No를 넣고 검색하면 데이터를 시트에 넣습니다.</p>
+  <div class="form"><label>Ref No 검색<input id="ql-ref" placeholder="ENI Ref No" style="border-color:var(--ok)"></label><label>기간 구분<select><option>전체</option><option>올해</option></select></label><span></span></div>
+  <div class="tbl-wrap"><table><thead><tr><th>상태</th><th>접수일자</th><th>매출처</th><th>선명</th><th>ENIRefNo</th><th>직원명</th><th class="r">견적금액</th><th class="r">발주금액</th></tr></thead><tbody>${
+    rows.map(x=>`<tr class="click" data-file="${x.fileName}"><td>${statusPill(x)}${si(x)>4?` <span class="note">G4 ${G4(x)}</span>`:""}</td><td class="num">${x.recvDate}</td><td>${x.owner}</td><td>${x.ship}</td><td class="mono">${x.fileName}</td><td>${x.emp}</td><td class="r num">${won(quoteAmt(x))}</td><td class="r num">${won(poAmt(x))}</td></tr>`).join("")
+  }</tbody></table></div><p class="note">줄을 더블클릭(여기서는 클릭)하면 그 건이 작업 시트에 들어갑니다. 새 건은 리본 「견적서류 등록」.</p></div>`;
 }
+/* 견적서류 등록 = frmNewQuotation "New Quotation" */
 function vNew(){
-  const o=OWNERS[0];
-  return `<div class="bar"><button class="btn" id="back">← ORDER LIST</button><h1>New Quotation (견적서류 등록)</h1></div>
+  const sel=nqSel;
+  const prefix=sel?`${sel.거래처빌}-${sel.선박빌}-${yy()}-`:"";
+  return progTabs()+ribbonQuo(null)+`<div class="bar"><button class="btn" id="back">← 견적서류 검색</button><h1>New Quotation (견적서류 등록)</h1></div>
   <div class="box act">
-    <div class="form"><div class="radios"><label><input type="radio" name="nq-area" checked>국내</label><label><input type="radio" name="nq-area">해외</label></div>
-      <div class="radios"><label><input type="radio" name="nq-kind">일반</label><label><input type="radio" name="nq-kind">딜러</label><label><input type="radio" name="nq-kind" checked>선주</label></div><span></span></div>
+    <div class="form"><div class="radios"><span class="note">국/내외 구분</span><label><input type="radio" name="nq-area" value="국내 업체" checked>국내 업체</label><label><input type="radio" name="nq-area" value="해외 업체">해외 업체</label></div>
+      <div class="radios"><span class="note">딜러 구분</span><label><input type="radio" name="nq-dealer" value="일반 업체" checked>일반 업체</label><label><input type="radio" name="nq-dealer" value="딜러">딜러</label></div>
+      <div class="radios"><span class="note">결제(대금청구지)</span><label><input type="radio" name="nq-pay" value="선주사 결제" checked>선주사 결제</label><label><input type="radio" name="nq-pay" value="관리사 결제">관리사 결제</label></div></div>
+    <div class="form"><label>검색어<input id="nq-q" placeholder="Enter 또는 새로고침을 클릭하세요."></label><div style="align-self:end"><button class="btn sm" id="nq-refresh">새로고침</button></div><span></span></div>
+    <div class="tbl-wrap"><table><thead><tr><th>해외</th><th>딜러</th><th>선사</th><th>거래처명</th><th>선명</th><th>선주명</th><th>거래처빌</th><th>선박빌</th><th>TEL</th><th>담당자HP</th><th>선박ID</th></tr></thead><tbody>${
+      CUSTOMERS.map((c,i)=>`<tr class="click" data-cust="${i}" ${sel===c?'style="outline:2px solid var(--accent)"':""}><td class="c">${c.해외}</td><td class="c">${c.딜러}</td><td class="c">${c.선사}</td><td>${c.거래처명}</td><td>${c.선명}</td><td>${c.선주명}</td><td class="mono">${c.거래처빌}</td><td class="mono">${c.선박빌}</td><td class="num">${c.TEL}</td><td>${c.담당자HP}</td><td class="num">${c.선박ID}</td></tr>`).join("")
+    }</tbody></table></div>
+    <p class="note" style="margin:6px 0 10px">거래처 줄을 클릭하면 File Name 앞부분(거래처빌-선박빌-YY-)이 채워집니다. 뒤의 일련번호는 원본과 같이 직접 입력합니다. (탭: 업체 가~하·ABC·123·Etc, 선박 A~Z·한·123·Etc)</p>
     <div class="form">
-      <label for="nq-owner">매출처<select id="nq-owner">${OWNERS.map(c=>`<option>${c.name}</option>`).join("")}</select></label>
-      <label for="nq-ship">선박<select id="nq-ship">${o.ships.map(s=>`<option>${s}</option>`).join("")}</select></label>
-      <label for="nq-emp">담당 직원<select id="nq-emp">${EMPS.map(e=>`<option>${e}</option>`).join("")}</select></label>
-      <label for="nq-ref">Ref No<input id="nq-ref" value="SG-REQ-${String(S.seq.SG).padStart(3,"0")}"></label>
-      <label for="nq-file">File Name (자동)<input id="nq-file" value="ARK-SG-26-${String(S.seq.SG).padStart(4,"0")}" disabled></label>
-      <label for="nq-date">접수일<input id="nq-date" type="date" value="${todayISO()}"></label>
+      <label>담당 직원 선택<select id="nq-emp"><option value="">(선택)</option>${EMPS.map(e=>`<option>${e}</option>`).join("")}</select></label>
+      <label>선박 Ref No (발주처 Ref No)<input id="nq-ref" placeholder="예: SG-REQ-003"></label>
+      <label>접수일자<input id="nq-date" type="date" value="${todayISO()}"></label>
+      <label>Order ID (자동)<input id="nq-oid" value="${S.seq.order}" disabled></label>
+      <label>File Name (ENI Ref No)<input id="nq-file" value="${prefix}" placeholder="거래처빌-선박빌-YY-일련번호"></label>
+      <label>Department<select id="nq-dept">${DEPTS.map(d=>`<option>${d}</option>`).join("")}</select></label>
+      <label>Voyage<input id="nq-voy"></label>
+      <label>Supply port<input id="nq-port"></label>
+      <label>C/O &amp; C/E<input id="nq-coce"></label>
+      <label>CAPTINE<input id="nq-capt"></label>
     </div>
-    <div class="actions"><button class="btn pri" id="nq-ok">등록</button><span class="note">등록하면 작업 시트가 열리고 상태(G4)가 "접수"가 됩니다. 서류 폴더도 같이 만들어집니다.</span></div>
+    <div class="actions"><button class="btn" id="nq-clear" title="입력창을 초기화 합니다.">초기화</button><button class="btn pri" id="nq-ok" title="신규 Quotation을 (접수)등록 합니다.">등록</button><button class="btn" disabled title="등록 내용을 수정 합니다. (원본 코드 비어 있음)">수정</button><button class="btn" disabled title="등록 내용을 삭제 합니다. (원본 코드 비어 있음)">삭제</button><span class="note">등록하면 [ORDER]에 상태 접수·통화 KRW로 저장되고, 폴더 ${ROOT}\\국내선사\\&lt;업체명&gt;\\&lt;선명&gt; 을 확인한 뒤 작업 시트를 다시 채웁니다.</span></div>
   </div>`;
 }
+/* 작업 시트 */
 function vWork(x){
-  const st=x.status,i=si(x);
-  const editable=st==="접수"||st==="INQUIRY";
+  const st=x.status,i=si(x),g=G4(x);
+  const edQty=st==="접수"||st==="INQUIRY",edPrice=st==="INQUIRY",edState=si(x)<=3;
+  const stSel=(l,k)=>`<select id="w-st${k}" style="width:70px">${N_LIST.map(o=>`<option ${l.state===o?"selected":""}>${o}</option>`).join("")}</select>`;
   const rows=x.lines.map((l,k)=>`<tr><td>${k+1}</td><td>${l.machinery}</td><td>${l.maker}</td><td>${l.type}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td>${l.origin}</td>
-    <td class="r">${editable?`<input type="number" id="w-qty${k}" value="${l.qty}" min="0" style="width:60px">`:`<span class="num">${l.qty}</span>`}</td><td>${l.unit}</td>
-    <td class="r">${st==="INQUIRY"?`<input type="number" id="w-up${k}" value="${l.uPrice}" step="100" style="width:90px">`:`<span class="num">${st==="접수"?"":won(l.uPrice)}</span>`}</td>
-    <td class="r num">${st==="접수"?"":won(l.uPrice*l.qty)}</td><td class="r num">${l.dday}</td>
-    <td class="c">${st==="INQUIRY"?`<select id="w-st${k}" style="width:70px"><option value="" ${!l.state?"selected":""}></option><option ${l.state==="견적"?"selected":""}>견적</option></select>`:st==="CONFIRM"?`<select id="w-st${k}" style="width:70px"><option value=""></option><option ${l.state==="견적"?"selected":""}>견적</option><option ${l.state==="발주"?"selected":""}>발주</option></select>`:l.state}</td>
-    <td>${l.cur}</td><td class="r">${st==="INQUIRY"?`<input type="number" id="w-buy${k}" value="${l.buy}" step="100" style="width:90px">`:`<span class="num">${st==="접수"?"":won(l.buy)}</span>`}</td>
-    <td>${editable?`<select id="w-v${k}">${VENDORS.map(v=>`<option ${v===l.vendor?"selected":""}>${v}</option>`).join("")}</select>`:l.vendor}</td></tr>`).join("");
+    <td class="r">${edQty?`<input type="number" id="w-qty${k}" value="${l.qty}" min="0" style="width:60px">`:`<span class="num">${l.qty}</span>`}</td><td>${l.unit}</td>
+    <td class="r">${edPrice?`<input type="number" id="w-up${k}" value="${l.uPrice}" step="100" style="width:90px">`:`<span class="num">${l.uPrice?won(l.uPrice):""}</span>`}</td>
+    <td class="r num">${l.uPrice?won(l.uPrice*l.qty):""}</td><td class="r">${edPrice?`<input type="number" id="w-dd${k}" value="${l.dday}" style="width:55px">`:`<span class="num">${l.dday}</span>`}</td>
+    <td class="c">${edState?stSel(l,k):l.state}</td>
+    <td>${l.cur}</td><td class="r num">${l.buy?won(l.buy):""}</td><td>${l.vendor}</td><td>${edQty?`<input id="w-rm${k}" value="${l.remark||""}" style="width:90px">`:l.remark||""}</td>
+    <td>${l.v1.cur}</td><td class="r">${edPrice?`<input type="number" id="w-v1p${k}" value="${l.v1.price}" step="100" style="width:90px">`:`<span class="num">${l.v1.price?won(l.v1.price):""}</span>`}</td><td>${edQty?`<select id="w-v1n${k}">${VENDORS.map(v=>`<option ${v===l.v1.name?"selected":""}>${v}</option>`).join("")}</select>`:l.v1.name}</td></tr>`).join("");
+  const vendors=[...new Set(x.lines.filter(l=>l.state!=="삭제").map(l=>l.v1.name).filter(Boolean))];
   let act="";
-  if(st==="접수") act=`<div class="wait info">접수 상태. 부품 줄을 확인하고 「서류_작성」을 누르면 매입처별 INQUIRY 시트가 만들어집니다 (매입처에 단가 문의).</div><div class="actions"><button class="btn pri" id="make">서류_작성</button><span class="note">만들어질 서류: INQUIRY ${[...new Set(x.lines.map(l=>l.vendor))].join(", ")}</span></div>`;
-  else if(st==="INQUIRY") act=`<div class="wait info">INQUIRY 보냄. 매입처 회신 단가를 매입단가 칸에, 판매가를 U/PRICE에 넣고 상태 칸을 "견적"으로 한 뒤 「서류_작성」 → QUOTATION이 만들어져 선사에 갑니다.</div><div class="actions"><button class="btn pri" id="make">서류_작성</button><button class="link" id="fill">시연: 단가 채우고 상태 "견적"으로</button></div>`;
-  else if(st==="QUOTATION") act=`<div class="wait"><span class="dot"></span>QUOTATION을 선사에 보냈습니다. ${x.owner} 공무감독 폰에 "새 견적 1건"이 떠 있고, 폰에서 승인하면 상태가 CONFIRM으로 바뀝니다.</div><div class="actions"><button class="link" id="fake-ok">폰이 없을 때: 여기서 대신 CONFIRM</button></div>${quoDoc(x)}`;
-  else if(st==="CONFIRM") act=`<div class="wait ok">선사가 견적을 확인(CONFIRM)했습니다. 상태 칸이 "발주"인 줄로 발주서(PURCHASE)가 매입처별로 만들어집니다. 「서류_작성」을 누르세요.</div><div class="actions"><button class="btn pri" id="make">서류_작성</button><span class="note">발주금액 K6: ${won(poAmt(x))}</span></div>`;
-  else if(st==="PURCHASE") act=`<div class="wait ok">PURCHASE 완료 · 매입처에 발주서를 보냈습니다. 이제부터는 오더관리입니다: 리본 「오더_검색」 → [발주/입고 검색] 탭에서 이 건을 발주→입고 처리합니다.</div><div class="actions"><button class="btn pri" id="go-order">오더_검색</button></div>${[...new Set(x.lines.filter(l=>l.state==="발주").map(l=>l.vendor))].map(v=>poDoc(x,v)).join("")}`;
-  else act=`<div class="wait ok">${st} · 오더관리에서 진행 중입니다.</div><div class="actions"><button class="btn" id="go-order">오더_검색</button></div>`;
-  if(x.rejected) act=`<div class="wait">선사 반려 · 사유: ${x.rejectReason}. 단가·수량을 고쳐 「서류_작성」으로 QUOTATION을 다시 보냅니다.</div><div class="actions"><button class="btn pri" id="make">서류_작성</button></div>`;
-  return `<div class="bar"><button class="btn" id="back">← ORDER LIST</button><h1>작업 시트 <span class="mono" style="font-weight:500">${x.fileName}</span></h1>${statusPill(x)}</div>
+  if(st==="접수") act=`<div class="wait info">접수 (G4). 부품 줄을 넣고 「서류_작성」을 누르면 매입처(U열)별 INQUIRY 시트가 만들어집니다. 줄이 없으면 "견적 아이템이 존재하지 않습니다."</div><div class="actions"><button class="btn pri" id="add-part">부품 추가 (F열 더블클릭 → 부품 자동완성)</button><button class="link" id="fill-parts">시연: 테스트 부품 3줄 넣기</button><span class="note">만들어질 서류: ${vendors.length?vendors.map(v=>v+" (INQUIRY)").join(", "):"없음"}</span></div>`;
+  else if(st==="INQUIRY") act=`<div class="wait info">INQUIRY (G4). 매입처 회신 단가를 「견적 매입처1」 단가에, 판매가를 U/PRICE에 넣습니다. 「서류_작성」을 누르면 품목 상태가 전부 "견적"이 되고 QUOTATION 시트가 만들어집니다.</div><div class="actions"><button class="link" id="fill">시연: 매입처 회신 단가·U/PRICE 채우기</button><span class="note">N열을 견적/발주로 바꾸면 매입처1(S:U)이 통화·매입단가·매입처(O:Q)로 복사됩니다.</span></div>`;
+  else if(st==="QUOTATION") act=(x.phoneOk?`<div class="wait ok">선사 회신(폰): 발주 확인. N열이 "발주"로 바뀌었습니다. 「서류_작성」을 누르면 CONFIRM (SALES CONFIRM, 발주No 채번)이 됩니다.</div>`:`<div class="wait"><span class="dot"></span>QUOTATION (G4)을 선사에 보냈습니다. ${x.owner} ${OWNERS[0].super} 폰에 "새 견적 1건"이 떠 있습니다. 선사가 폰에서 승인하면 N열이 "발주"가 되고, 사무실이 「서류_작성」을 눌러 CONFIRM 합니다.</div><div class="actions"><button class="link" id="fake-ok">폰이 없을 때: 선사 회신을 받은 것으로 하고 N열을 "발주"로</button></div>`);
+  else if(st==="CONFIRM") act=`<div class="wait ok">CONFIRM (G4) · 발주No ${x.poNo} · 발주일자 ${x.poDate}. 「서류_작성」을 누르면 품목 상태 "발주" 줄로 매입처별 PURCHASE ORDER 시트가 만들어집니다.</div>`;
+  else if(st==="PURCHASE") act=`<div class="wait ok">PURCHASE (G4) · 매입처별 발주서 작성 완료. 이제부터는 오더관리입니다 (ENI - 오더관리 탭 → 오더_검색). 「서류_작성」을 다시 누르면 PURCHASE ORDER 시트만 다시 만듭니다.</div><div class="actions"><button class="btn pri" id="go-order">ENI - 오더관리 → 오더_검색</button></div>`;
+  else act=`<div class="wait ok">G4는 PURCHASE에서 멈추고, 품목 상태(N열)가 ${st}입니다. 오더관리에서 진행 중입니다.</div><div class="actions"><button class="btn" id="go-order">ENI - 오더관리 → 오더_검색</button></div>`;
+  if(x.rejected) act=`<div class="wait">선사 폰 반려 · 사유: ${x.rejectReason}. (원본에는 회신 처리 화면이 없고 메일로 받습니다.) 단가·수량을 고쳐 「서류(견적서) 재작성」으로 QUOTATION을 다시 보내거나 「이전 견적단계로 환원」합니다.</div>`;
+  const kv=[["File Name",x.fileName,"담당 직원",x.emp],["거래처 구분",`${x.area==="국내 업체"?"국내":"해외"}-${x.dealer==="딜러"?"딜러":"일반"}`,"진행상태",`<b>${g}</b>`],["Vessel Name",x.ship,"접수일자",x.recvDate],["Request No.",x.refNo,"견적일자",x.quoDate||""],["Ship Owner",x.owner,"발주일자",x.poDate||""],["담당자",OWNERS[0].super,"발주No",x.poNo||""],["Tel","051-111-1111","Department",x.dept||""],["Fax","","Voyage",x.voyage||""],["E-Mail (자재팀)","super@example.com","Supply port",x.supplyPort||""],["E-Mail (선박)","","C/O or C/E",x.coce||""],["V-SAT Tel","","CAPTINE",x.captain||""]];
+  const right=[["매출통화","KRW"],["견적금액",won(quoteAmt(x))],["발주금액",won(poAmt(x))],["DISCOUNT","0"],["발주합계",won(poAmt(x))],["마진율",(g==="CONFIRM"||g==="PURCHASE")&&buyAmt(x)?((poAmt(x)-buyAmt(x))/buyAmt(x)*100).toFixed(1)+"%":""]];
+  return progTabs()+ribbonQuo(x)+`<div class="bar"><button class="btn" id="back">← 견적서류 검색</button><h1>작업 시트 <span class="mono" style="font-weight:500">${x.fileName}</span></h1>${statusPill(x)}<span class="note">Order ID ${x.orderId}</span></div>
   ${rail(x)}
   <div class="cols"><div class="box act">
-    <dl class="kv" style="margin-bottom:10px;grid-template-columns:110px 1fr 110px 1fr"><dt>File Name</dt><dd class="mono">${x.fileName}</dd><dt>담당 직원</dt><dd>${x.emp}</dd><dt>거래처 (D7)</dt><dd>${x.owner} · ${x.ship}</dd><dt>Ref No</dt><dd class="mono">${x.refNo}</dd><dt>상태 (G4)</dt><dd><b>${x.status}</b></dd><dt>접수일</dt><dd class="num">${x.recvDate}</dd><dt>견적금액 (K5)</dt><dd class="num">${won(quoteAmt(x))}</dd><dt>발주금액 (K6)</dt><dd class="num">${won(poAmt(x))}</dd></dl>
-    <div class="tbl-wrap"><table><thead><tr><th>NO.</th><th>MACHINERY</th><th>MAKER</th><th>TYPE</th><th>PART NO</th><th>DESCRIPTION</th><th>Origin</th><th class="r">Q'TY</th><th>UNIT</th><th class="r">U/PRICE</th><th class="r">T/PRICE</th><th class="r">D.DAY</th><th class="c">상태</th><th>통화</th><th class="r">매입단가</th><th>매입처</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="display:grid;grid-template-columns:1fr auto;gap:12px;margin-bottom:10px"><dl class="kv" style="grid-template-columns:100px 1fr 90px 1fr">${kv.map(r=>`<dt>${r[0]}</dt><dd>${r[1]}</dd><dt>${r[2]}</dt><dd>${r[3]}</dd>`).join("")}</dl><dl class="kv" style="grid-template-columns:70px 100px;align-content:start">${right.map(r=>`<dt>${r[0]}</dt><dd class="num r" style="text-align:right">${r[1]}</dd>`).join("")}</dl></div>
+    <div class="note" style="margin-bottom:4px">15행: QuoID · 견적 아이템 목록 · 견적 · 견적/발주(발주수량은 AH열) · 견적 매입처1 (매입처2~5, 재고처리 열은 시연에서 생략)</div>
+    <div class="tbl-wrap"><table><thead><tr><th>NO.</th><th>MACHINERY</th><th>MAKER</th><th>TYPE</th><th>PART NO</th><th>DESCRIPTION</th><th>Origin</th><th class="r">Q'TY</th><th>UNIT</th><th class="r">U/PRICE</th><th class="r">T/PRICE</th><th class="r">D.DAY</th><th class="c">상태</th><th>통화</th><th class="r">매입단가</th><th>매입처</th><th>Remark</th><th>통화</th><th class="r">단가</th><th>업체명</th></tr></thead><tbody>${rows||'<tr><td colspan="20" class="note">B17 비어 있음 — 견적 아이템이 없습니다.</td></tr>'}</tbody></table></div>
     <div style="margin-top:12px">${act}</div>
-  </div><div class="box"><h2>진행 기록</h2>${timeline(x)}</div></div>`;
+    ${sheetTabs(x)}
+  </div><div class="box"><h2>진행 기록</h2>${timeline(x)}${(x.saved||[]).length?`<h2 style="margin-top:12px">서버 저장</h2><ul class="note" style="margin:0;padding-left:16px">${x.saved.map(s=>`<li class="mono">${s}</li>`).join("")}</ul>`:""}</div></div>`;
 }
+/* 오더관리 홈 = ORDER LIST 시트 */
+function vOrderHome(){
+  const rows=S.orders.filter(x=>x.lines.some(l=>l.state==="발주"||l.state==="입고"));
+  return progTabs()+ribbonOrd(null)+`<div class="box"><h2>ORDER LIST (시트)</h2><p class="note" style="margin:0 0 8px">품목 상태가 발주(3)·입고(4)인 건만 보입니다 (쿼리 오더관리목록). F열부터는 매입처별: 업체명(발주 m/d)(입고예정 m/d) — 입고예정일이 오늘 이전이면 빨강, 입고되면 (입고 m/d) — 입고지가 옥슨앤사무실이면 초록, 그 밖은 파랑.</p>
+  <div class="tbl-wrap"><table><thead><tr><th>담당자ID</th><th>매출처</th><th>거래처</th><th>선명</th><th>서류보기</th><th>매입처 1</th><th>매입처 2</th></tr></thead><tbody>${
+    rows.map(x=>{const vs=[...new Set(poLines(x).filter(l=>l.state!=="납품").map(l=>l.vendor))];
+      const cells=vs.map(v=>{const ls=poLines(x).filter(l=>l.vendor===v&&l.state!=="납품");const l=ls[0];if(l.state==="발주"){const due=addDays(x.poDate,Math.max(...ls.map(z=>z.dday)));return `<span style="color:${due<=todayISO()?"#c62828":"inherit"}">${v}(발주 ${md(x.poDate)})(입고예정 ${md(due)})</span>`;}return `<span style="color:${!l.inPlace||l.inPlace==="옥슨앤사무실"?"var(--ok)":"#1565c0"}">${v}(발주 ${md(x.poDate)})(입고 ${md(l.inDate)})</span>`;});
+      return `<tr><td>${x.emp}</td><td>${x.owner}</td><td>${x.owner}</td><td>${x.ship}</td><td><button class="link" data-open="${x.fileName}">${x.fileName} 열기</button></td><td>${cells[0]||""}</td><td>${cells[1]||""}</td></tr>`}).join("")||'<tr><td colspan="7" class="note">발주·입고 상태 품목이 없습니다.</td></tr>'
+  }</tbody></table></div></div>`;
+}
+/* 오더_검색 = frmOrderList */
+const OS_TABS=[["통합 검색","검색","[ 통합 검색 ] 체크박스에서 상태를 체크하세요...",l=>true],["견적","견적 조회 및 발주 등록","[ 견적 검색 ] 체크 아이템에 대한 상태 : '견적'을 '발주'로 변경",l=>l.state==="견적"],["발주","입고 등록 및 발주 취소","[ 발주/입고 검색 ] 발주내역 작성시에는 체크 아이템만 출력 됩니다.",l=>l.state==="발주"],["입고","납품 등록 및 입고 취소","[ 입고 검색] 인수증 작성시에는 체크 아이템만 출력 됩니다.",l=>l.state==="입고"],["납품","청구 등록 및 납품 취소","[ 납품 검색 ]",l=>l.state==="납품"]];
+const OS_MENU={"발주":[["체크 아이템 상태 변경(일괄)",null],["상태를 '발주'→'입고' 로 변경","in"],["스티커 출력용 데이터 저장",""]],"입고":[["체크 아이템 상태 변경(일괄)",null],["인수증(국내 탁송) 작성 (상태를 '입고'→'납품'으로 변경)","dn-dom"],["인수증(해외 탁송) 작성 (상태를 '입고'→'납품'으로 변경)","dn-abr"],["상태를 '발주'←'입고' 로 변경(이전단계로 환원)","rv-in"]],"납품":[["체크 아이템 상태 변경(일괄)",null],["인수증(국내 탁송) 재 출력(PLACE 재입력[수정])",""],["인수증(해외 탁송) 재 출력(PLACE 재입력[수정])",""],["상태를 '입고'←'납품' 로 변경(이전단계로 환원)","rv-dn"]]};
 function vOrderSearch(){
-  const tabs=[["견적","[ 견적 검색 ]",x=>["접수","INQUIRY","QUOTATION","CONFIRM"].includes(x.status)],["발주","[ 발주/입고 검색 ]",x=>x.status==="PURCHASE"],["입고","[ 입고 검색]",x=>x.status==="입고"],["납품","[ 납품 검색 ]",x=>x.status==="납품"],["통합","[ 통합 검색 ]",x=>true]];
-  const cur=tabs.find(t=>t[0]===tab)||tabs[1];
-  const list=S.orders.filter(cur[2]);
-  const hint={"발주":"발주 줄을 선택하고 「발주→입고」를 누릅니다 (엑셀에서는 오른쪽 클릭 메뉴). 입고지와 중량을 넣습니다.","입고":"입고 줄을 선택하고 「인수증」을 누릅니다. Inspection Report를 만들어 서버에 저장하면 납품이 됩니다.","납품":"납품이 끝난 건입니다. 다음은 「Additional Charge등록」에서 상태를 청구로 바꾸는 단계입니다 (시연 범위 밖).","견적":"아직 견적관리 단계인 건입니다.","통합":"전체 건입니다."}[cur[0]];
-  return `<div class="bar"><button class="btn" id="back">← ORDER LIST</button><h1>오더_검색 (오더관리)</h1></div>
-  <div class="box act"><div class="form"><div class="radios"><label><input type="radio" name="os-by" checked>매출처</label><label><input type="radio" name="os-by">선박</label></div><label>수주<select><option>ARKOR MARINE</option></select></label><label>매입처<select><option>전체</option>${VENDORS.map(v=>`<option>${v}</option>`).join("")}</select></label></div>
-    <div class="tabs" role="tablist">${tabs.map(t=>`<button role="tab" aria-selected="${t[0]===cur[0]}" data-tab="${t[0]}">${t[1]}</button>`).join("")}</div>
-    <div class="tbl-wrap"><table><thead><tr><th></th><th>File Name</th><th>매출처</th><th>선명</th><th>PART NO</th><th>DESCRIPTION</th><th class="r">Q'TY</th><th>매입처</th><th>상태</th><th>입고지</th><th class="r">중량</th></tr></thead><tbody>${
-      list.flatMap(x=>x.lines.filter(l=>l.state==="발주"||cur[0]==="견적"||cur[0]==="통합").map((l,k)=>`<tr><td class="c">${k===0?`<input type="radio" name="os-sel" value="${x.fileName}" ${openFile===x.fileName?"checked":""}>`:""}</td><td class="mono">${x.fileName}</td><td>${x.owner}</td><td>${x.ship}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td class="r num">${l.qty}</td><td>${l.vendor}</td><td>${x.status}</td><td>${x.입고지||""}</td><td class="r num">${x.중량||""}</td></tr>`)).join("")||'<tr><td colspan="11" class="note">해당 건이 없습니다.</td></tr>'
+  const cur=OS_TABS.find(t=>t[0]===tab)||OS_TABS[2];
+  const extra={"통합 검색":["견적일자","발주일자","DDay","입고예정일","입고일자","납품일자","PLACE"],"견적":["견적일자"],"발주":["발주일자","DDay","입고예정일"],"입고":["입고일자","입고지","중량","납품일자"],"납품":["납품일자","PLACE"]}[cur[0]];
+  const items=S.orders.flatMap(x=>x.lines.map((l,k)=>({x,l,k})).filter(({l})=>l.state!=="삭제"&&l.state!=="접수"&&cur[3](l)));
+  const val=(x,l,c)=>({"견적일자":x.quoDate,"발주일자":x.poDate,"DDay":l.dday,"입고예정일":x.poDate?addDays(x.poDate,l.dday):"","입고일자":l.inDate,"입고지":l.inPlace,"중량":l.weight,"납품일자":l.dnDate,"PLACE":l.place}[c]||"");
+  const menu=OS_MENU[cur[0]];
+  return progTabs()+ribbonOrd(S.orders.find(y=>y.fileName===openFile))+`<div class="bar"><button class="btn" id="back-ord">← ORDER LIST</button><h1>오더_검색</h1></div>
+  <div class="box act"><div class="form"><div class="radios"><label><input type="radio" name="os-by" checked>선박명</label><label><input type="radio" name="os-by">매출처명</label></div><label>수주<select><option>ARKOR MARINE</option></select></label><label>매입처 / 입고예정일<select><option>전체</option>${VENDORS.map(v=>`<option>${v}</option>`).join("")}</select></label></div>
+    <div class="radios" style="margin-bottom:8px"><label><input type="checkbox" checked>견적</label><label><input type="checkbox" checked>발주</label><label><input type="checkbox" checked>입고</label><label><input type="checkbox" checked>납품</label><button class="btn sm" id="os-all">전체 선택</button></div>
+    <div class="tabs" role="tablist">${OS_TABS.map(t=>`<button role="tab" aria-selected="${t[0]===cur[0]}" data-tab="${t[0]}" title="${t[1]}">${t[0]}</button>`).join("")}</div>
+    <p class="note" style="margin:0 0 8px"><b>${cur[2]}</b>${menu?" · 목록에서 오른쪽 클릭(또는 「우클릭 메뉴」)":""}</p>
+    <div class="tbl-wrap" id="os-grid"><table><thead><tr><th></th><th>상태</th><th>선명</th><th>매출처</th><th>발주No</th><th>매입처</th>${extra.map(c=>`<th>${c}</th>`).join("")}<th>ENIRefNo</th><th>ItemNo</th><th>MACHINERY</th><th>MAKER</th><th>Type</th><th>PartNO</th><th>Description</th><th class="r">Qty</th><th>Unit</th><th class="r">UPrice</th><th class="r">TPrice</th><th class="r">매입수량</th><th>매입통화</th><th class="r">매입단가</th><th class="r">매입금액</th></tr></thead><tbody>${
+      items.map(({x,l,k})=>`<tr><td class="c"><input type="checkbox" class="os-chk" data-file="${x.fileName}" data-k="${k}" ${openFile===x.fileName?"checked":""}></td><td>${l.state}</td><td>${x.ship}</td><td>${x.owner}</td><td class="mono">${x.poNo||""}</td><td>${l.vendor}</td>${extra.map(c=>`<td class="num">${val(x,l,c)}</td>`).join("")}<td class="mono">${x.fileName}</td><td class="num">${k+1}</td><td>${l.machinery}</td><td>${l.maker}</td><td>${l.type}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td class="r num">${l.qty}</td><td>${l.unit}</td><td class="r num">${won(l.uPrice)}</td><td class="r num">${won(l.uPrice*l.qty)}</td><td class="r num">${l.qty}</td><td>${l.cur}</td><td class="r num">${won(l.buy)}</td><td class="r num">${won(l.buy*l.qty)}</td></tr>`).join("")||'<tr><td colspan="30" class="note">해당 품목이 없습니다.</td></tr>'
     }</tbody></table></div>
-    <p class="note" style="margin:10px 0 0">${hint}</p>
-    <div class="actions">${cur[0]==="발주"?'<button class="btn pri" id="to-in">발주→입고</button>':cur[0]==="입고"?'<button class="btn pri" id="to-dn">인수증</button>':cur[0]==="납품"?'<button class="btn" disabled>Additional Charge등록 (다음 단계)</button>':""}<button class="btn" id="os-open">선택한 건 작업 시트 보기</button></div>
+    <div class="actions">${menu?`<button class="btn pri" id="os-menu">우클릭 메뉴 ▾</button>`:`<span class="note">이 탭에는 우클릭 처리가 없습니다 (원본과 같음).</span>`}<button class="btn" id="os-open">체크한 건 작업 시트 보기</button></div>
+    ${openFile&&S.orders.find(y=>y.fileName===openFile)?sheetTabs(S.orders.find(y=>y.fileName===openFile)):""}
   </div>`;
 }
 function renderWeb(){
@@ -362,6 +469,7 @@ function renderWeb(){
   if(view==="new")w.innerHTML=vNew();
   else if(view==="work"&&x)w.innerHTML=vWork(x);
   else if(view==="order")w.innerHTML=vOrderSearch();
+  else if(view==="ordhome")w.innerHTML=vOrderHome();
   else{view="list";w.innerHTML=vList();}
   [...w.querySelectorAll(".tbl-wrap")].forEach((e,i)=>{if(sl[i])e.scrollLeft=sl[i];});
   if(aid){const el=$(aid);if(el){el.focus({preventScroll:true});}}
@@ -369,93 +477,176 @@ function renderWeb(){
 }
 function modal(html){$("modal-root").innerHTML=`<div class="overlay" id="ov"><div class="modal">${html}</div></div>`;}
 function closeModal(){$("modal-root").innerHTML="";}
+/* MsgBox / InputBox 흉내: 원본 문구 그대로 */
+let mbCb=null;
+function msgBox(text,title){modal(`<h2>${title||"Microsoft Excel"}</h2><div style="white-space:pre-line;font-size:13px">${text}</div><div class="actions" style="margin:0;justify-content:flex-end"><button class="btn pri" id="mb-ok">확인</button></div>`);mbCb=null;$("mb-ok").focus();}
+function confirmBox(text,title,cb){modal(`<h2>${title||"Microsoft Excel"}</h2><div style="white-space:pre-line;font-size:13px">${text}</div><div class="actions" style="margin:0;justify-content:flex-end"><button class="btn" id="mb-no">아니오(N)</button><button class="btn pri" id="mb-yes">예(Y)</button></div>`);mbCb=cb;$("mb-yes").focus();}
+function inputBox(prompt,def,cb){modal(`<h2>Microsoft Excel</h2><div style="white-space:pre-line;font-size:13px">${prompt}</div><input id="ib-val" value="${def||""}"><div class="actions" style="margin:0;justify-content:flex-end"><button class="btn" id="ib-cancel">취소</button><button class="btn pri" id="ib-ok">확인</button></div>`);mbCb=cb;const el=$("ib-val");el.focus();el.select();el.onkeydown=e=>{if(e.key==="Enter")$("ib-ok").click();};}
 function readWork(x){
   x.lines.forEach((l,k)=>{
-    const q=$("w-qty"+k),u=$("w-up"+k),b=$("w-buy"+k),s=$("w-st"+k),v=$("w-v"+k);
-    if(q)l.qty=+q.value||0;if(u)l.uPrice=+u.value||0;if(b)l.buy=+b.value||0;if(s)l.state=s.value;if(v)l.vendor=v.value;
+    const q=$("w-qty"+k),u=$("w-up"+k),d=$("w-dd"+k),s=$("w-st"+k),r=$("w-rm"+k),p=$("w-v1p"+k),n=$("w-v1n"+k);
+    if(q)l.qty=+q.value||0;if(u)l.uPrice=+u.value||0;if(d)l.dday=+d.value||0;if(r)l.remark=r.value;if(p)l.v1.price=+p.value||0;if(n)l.v1.name=n.value;
+    if(s&&s.value!==l.state){l.state=s.value;applyVendorRule(l);}
   });
 }
-function selectedOrder(){const r=document.querySelector('input[name="os-sel"]:checked');return r?S.orders.find(y=>y.fileName===r.value):null;}
+function checkedItems(){return [...document.querySelectorAll(".os-chk:checked")].map(c=>({x:S.orders.find(y=>y.fileName===c.dataset.file),k:+c.dataset.k})).filter(o=>o.x);}
+function openMenu(){
+  const menu=OS_MENU[tab];if(!menu)return;
+  modal(`<h2>우클릭 메뉴 · [ ${tab} ]</h2><div style="display:flex;flex-direction:column;gap:6px">${menu.map(([lab,act])=>act===null?`<div class="note" style="font-weight:600">${lab}</div>`:`<button class="btn" style="text-align:left" ${act?`id="mn-${act}"`:'disabled title="시연 범위 밖"'}>${lab}</button>`).join("")}</div><div class="actions" style="margin:0;justify-content:flex-end"><button class="btn" id="m-cancel">닫기</button></div>`);
+}
+function doIn(items){
+  inputBox("'입고지'를 입력하세요... ★ 필수 입력항목","옥슨앤사무실",place=>{
+    if(!place){msgBox("'입고지'가 입력되지 않았습니다.");return;}
+    inputBox("'중량'을 입력하세요... ★ 필수 입력항목, 숫자(소수점 가능)만 입력 합니다.","1",wt=>{
+      if(!wt){msgBox("'중량'이 입력되지 않았습니다.");return;}
+      confirmBox(`입고지: ${place}\n중량: ${wt}\n위 데이터로 입고처리 하시겠습니까? (※ 아니오(N)을 클릭하면 재입력(수정) 또는 작업취소 가능)`,null,()=>{
+        const touched=new Set();items.forEach(({x,k})=>{const l=x.lines[k];if(l.state!=="발주")return;l.state="입고";l.inPlace=place;l.weight=+wt;l.inDate=todayISO();touched.add(x);});
+        touched.forEach(x=>{addEvent(x,"입고","사무실",`${place} · ${wt}kg · 입고일자 ${todayISO()}(자동)`);syncItemStage(x);openFile=x.fileName;});
+        closeModal();tab="입고";toast("상태 '발주'→'입고' · 품목 상태ID 4");save();
+      });
+    });
+  });
+}
+function doDn(items,abroad){
+  inputBox("PLACE 를 입력하세요... ★ 필수 입력항목","",place=>{
+    if(!place){msgBox("PLACE가 입력되지 않았습니다.");return;}
+    confirmBox(`PLACE: ${place}\n위 Place로 '인수증'${abroad?" 및 '송장'":""} (※ 아니오(N)을 클릭하면 재입력(수정) 또는 작업취소 가능)`,null,()=>{
+      const touched=new Set();items.forEach(({x,k})=>{const l=x.lines[k];if(l.state!=="입고")return;l.state="납품";l.place=place;l.dnDate=todayISO();touched.add(x);});
+      touched.forEach(x=>{addEvent(x,"납품","사무실",`인수증${abroad?"(해외 탁송)+송장":"(국내 탁송)"} · PLACE ${place} · 납품일자 ${todayISO()}(자동)`);syncItemStage(x);openFile=x.fileName;addSheet(x,`${x.ship} (인수증)`);if(abroad)addSheet(x,`${x.ship}_송장`);});
+      tab="납품";rerender();persist();
+      msgBox("작업이 완료되었습니다.\n확인을 클릭하시면,,, 종료 합니다.");
+    });
+  });
+}
 $("web").addEventListener("click",e=>{
-  const id=e.target.id,tr=e.target.closest("tr.click"),tb=e.target.closest("[data-tab]");
-  if(tr){view="work";openFile=tr.dataset.file;renderWeb();return;}
+  const id=e.target.id,tr=e.target.closest("tr.click"),tb=e.target.closest("[data-tab]"),pg=e.target.closest("[data-prog]"),sh=e.target.closest("[data-sheet]"),op=e.target.closest("[data-open]");
+  if(pg){prog=pg.dataset.prog;view=prog==="ord"?"ordhome":"list";renderWeb();return;}
+  if(tr&&tr.dataset.cust){nqSel=CUSTOMERS[+tr.dataset.cust];const f=$("nq-file");const v=f.value;renderWeb();$("nq-file").value=`${nqSel.거래처빌}-${nqSel.선박빌}-${yy()}-`+(v.includes("-")?v.split("-").pop():"");return;}
+  if(tr){view="work";openFile=tr.dataset.file;showSheet=null;renderWeb();return;}
+  if(op){view="work";openFile=op.dataset.open;prog="quo";showSheet=null;renderWeb();return;}
   if(tb){tab=tb.dataset.tab;renderWeb();return;}
-  if(id==="new-quote"){view="new";renderWeb();return;}
-  if(id==="r-search"||id==="back"){view="list";renderWeb();return;}
-  if(id==="r-order"||id==="go-order"){view="order";tab="발주";renderWeb();return;}
-  const x=S.orders.find(y=>y.fileName===openFile);
+  if(sh){showSheet=sh.dataset.sheet;renderWeb();return;}
+  if(id==="new-quote"){view="new";prog="quo";nqSel=null;renderWeb();return;}
+  if(id==="r-search"||id==="back"){view="list";prog="quo";renderWeb();return;}
+  if(id==="ol-refresh"||id==="back-ord"){view="ordhome";prog="ord";renderWeb();return;}
+  if(id==="r-order"||id==="go-order"){view="order";prog="ord";tab="발주";renderWeb();return;}
+  if(id==="nq-clear"){nqSel=null;renderWeb();return;}
+  if(id==="nq-refresh"){toast("거래처 목록 새로고침 (쿼리 거래처확장)");return;}
   if(id==="nq-ok"){
-    const ship=$("nq-ship").value,code=shipCode(ship);S.seq[code]=(S.seq[code]||1);
-    const fileName=`ARK-${code}-26-${String(S.seq[code]).padStart(4,"0")}`;S.seq[code]++;
-    const nx={fileName,refNo:$("nq-ref").value||`${code}-REQ-${String(S.seq[code]-1).padStart(3,"0")}`,owner:$("nq-owner").value,ship,emp:$("nq-emp").value,recvDate:$("nq-date").value,status:"접수",lines:[line(0,2),line(1,10),line(2,1)],events:[]};
-    nx.lines.forEach(l=>{l.uPrice=0;});
-    addEvent(nx,"접수","사무실",nx.refNo);S.orders.push(nx);view="work";openFile=fileName;toast(`${fileName} 등록 · 상태 접수`);save();return;
+    if(!nqSel){msgBox("발주처(거래처)를 선택해 주세요.");return;}
+    if(!$("nq-emp").value){msgBox("담당(접수) 직원을 선택해 주세요.");return;}
+    if(!$("nq-ref").value.trim()){msgBox("발주처(거래처)의 Ref No를 입력해 주세요.");return;}
+    const fileName=$("nq-file").value.trim(),prefix=`${nqSel.거래처빌}-${nqSel.선박빌}-${yy()}-`;
+    if(!fileName||fileName===prefix){msgBox("ENI의 Ref No를 입력해 주세요.");return;}
+    const dup=S.orders.find(y=>y.fileName===fileName);
+    if(dup){msgBox(`'${fileName}' 는\n발주처: ${dup.owner}\n발주처 Ref No: ${dup.refNo}\n상태: ${G4(dup)}\n로 진행 중인 ENI Ref No 입니다.\n'중복'이므로 등록할 수 없습니다.`);return;}
+    const nx={fileName,orderId:S.seq.order++,refNo:$("nq-ref").value.trim(),owner:nqSel.거래처명,ship:nqSel.선명,ownerBill:nqSel.거래처빌,shipBill:nqSel.선박빌,emp:$("nq-emp").value,recvDate:$("nq-date").value,dept:$("nq-dept").value,voyage:$("nq-voy").value,supplyPort:$("nq-port").value,coce:$("nq-coce").value,captain:$("nq-capt").value,area:document.querySelector('input[name="nq-area"]:checked').value,dealer:document.querySelector('input[name="nq-dealer"]:checked').value,payment:document.querySelector('input[name="nq-pay"]:checked').value,status:"접수",lines:[],events:[],sheets:["작업"],saved:[]};
+    addEvent(nx,"접수","사무실",`[ORDER] 상태ID 1 · 통화 KRW · ${nx.payment}`);S.orders.push(nx);view="work";openFile=fileName;showSheet=null;
+    toast(`폴더 확인: ${folder(nx)} · 작업 시트 다시 채움`);save();return;
+  }
+  const x=S.orders.find(y=>y.fileName===openFile);
+  if(id==="os-all"){const cs=[...document.querySelectorAll(".os-chk")];const on=cs.some(c=>!c.checked);cs.forEach(c=>c.checked=on);e.target.textContent=on?"선택 해제":"전체 선택";return;}
+  if(id==="os-menu"){if(!checkedItems().length){msgBox("아이템이 체크되지 않았습니다.");return;}openMenu();return;}
+  if(id==="os-open"){const s=checkedItems()[0];if(!s){msgBox("아이템이 체크되지 않았습니다.");return;}openFile=s.x.fileName;view="work";prog="quo";showSheet=null;renderWeb();return;}
+  if(id==="mk-ol"){const its=checkedItems();if(!its.length){msgBox("아이템이 체크되지 않았습니다.");return;}const o=its[0].x;openFile=o.fileName;addSheet(o,`${o.ship} (발주내역)`);addEvent(o,o.status,"사무실","발주내역서 만들기 · 시트 "+o.ship);toast(`발주내역 시트 작성: ${o.ship}`);save();return;}
+  if(id==="srv-save"&&x){
+    const sh=(x.sheets||[]).filter(s=>s.endsWith(" (인수증)")||s.endsWith(" (발주내역)"));const cur=showSheet&&sh.includes(showSheet)?showSheet:sh[sh.length-1];
+    const l=x.lines.find(z=>z.state==="납품");const fn=cur.endsWith(" (인수증)")?`${l?l.dnDate:todayISO()}_${x.ship}_${l?l.place:""}.xlsx`:`${x.ship}(ORDER LIST).xlsx`;
+    const path=`${ROOT}\\국내선사\\${x.owner}\\0.인수증\\${fn}`;
+    confirmBox(`${path}\n현재 시트를 서버의 위 경로에 백업 저장 합니다.\n저장 하시겠습니까?`,null,()=>{x.saved=(x.saved||[]).concat([path]);closeModal();rerender();persist();msgBox("저장 완료");});return;
   }
   if(!x)return;
-  if(id==="fill"){x.lines.forEach((l,k)=>{l.uPrice=PARTS[k].sell;l.buy=PARTS[k].buy;l.state="견적";});toast("단가를 채우고 상태를 견적으로");save();return;}
+  if(id==="add-part"){modal(`<h2>부품 자동완성 (frmAuto)</h2><p class="note" style="margin:0">PARTNO 테이블의 테스트 행. 줄을 누르면 16행 아래에 추가됩니다 (Q'TY 1, 상태 접수).</p><div class="tbl-wrap"><table><thead><tr><th>Machinery</th><th>Maker</th><th>Type</th><th>PartNO</th><th>Description</th></tr></thead><tbody>${PARTS.map((p,i)=>`<tr class="click" data-part="${i}"><td>${p.machinery}</td><td>${p.maker}</td><td>${p.type}</td><td class="mono">${p.partNo}</td><td>${p.desc}</td></tr>`).join("")}</tbody></table></div><div class="actions" style="margin:0;justify-content:flex-end"><button class="btn" id="m-cancel">닫기</button></div>`);return;}
+  if(id==="fill-parts"){readWork(x);x.lines=[line(0,2),line(1,10),line(2,1)];toast("테스트 부품 3줄 · 매입처1 업체명 채움");save();return;}
+  if(id==="fill"){readWork(x);x.lines.forEach((l)=>{const P=PARTS.find(p=>p.partNo===l.partNo)||PARTS[0];l.v1.price=P.buy;l.uPrice=P.sell;});toast("매입처 회신 단가(매입처1 단가)와 U/PRICE 채움");save();return;}
+  if(id==="fake-ok"){readWork(x);x.lines.forEach(l=>{if(l.state==="견적"){l.state="발주";applyVendorRule(l);}});x.phoneOk=true;addEvent(x,"QUOTATION","PC 대신","선사 회신(발주 확인)을 받은 것으로 처리 · N열 발주");toast("N열 발주 · 「서류_작성」으로 CONFIRM");save();return;}
+  if(id==="remake"){readWork(x);if(x.rejected){x.rejected=false;x.rejectReason="";addEvent(x,"QUOTATION","사무실","재작성 · 다시 보냄");}addEvent(x,x.status,"사무실","서류(견적서) 재작성 (상태 유지)");toast("데이터 저장 후 서류만 다시 작성 (상태 유지)");save();return;}
+  if(id==="revert"){
+    readWork(x);const g=G4(x);
+    const prev={"INQUIRY":"접수","QUOTATION":"INQUIRY","CONFIRM":"QUOTATION","PURCHASE":"CONFIRM"}[g];
+    if(g==="접수"){confirmBox("이 오더(접수 건)와 견적 아이템·견적의뢰 내역이 DB에서 영구 삭제됩니다.\n계속하시겠습니까?",null,()=>{S.orders=S.orders.filter(y=>y!==x);closeModal();view="list";openFile=null;toast("ORDER, QUOTATION, INQUIRY 삭제");save();});return;}
+    if(g==="QUOTATION"){x.lines.forEach(l=>{if(l.state==="견적"||l.state==="발주"){l.state="접수";l.vendor="";l.buy=0;l.cur="";}});x.phoneOk=false;x.rejected=false;}
+    if(g==="CONFIRM"){x.lines.forEach(l=>{if(l.state==="발주")l.state="견적";});x.poDate="";x.poNo="";x.phoneOk=false;}
+    if(g==="INQUIRY"){x.quoDate="";}
+    x.sheets=["작업"];showSheet=null;setStatus(x,prev,"사무실","이전 견적단계로 환원");toast(`환원: ${g} → ${prev}`);save();return;
+  }
   if(id==="make"){
     readWork(x);
-    if(x.rejected){x.rejected=false;x.rejectReason="";setStatus(x,"QUOTATION","사무실",won(quoteAmt(x))+" 원 · 다시 보냄");toast("QUOTATION 다시 보냄");save();return;}
-    if(x.status==="접수"){setStatus(x,"INQUIRY","사무실",[...new Set(x.lines.map(l=>l.vendor))].join(", "));toast("INQUIRY 시트 작성 · 매입처에 단가 문의");save();return;}
-    if(x.status==="INQUIRY"){
-      const ok=x.lines.filter(l=>l.state==="견적");
-      if(!ok.length||ok.some(l=>!l.uPrice)){toast("상태를 \"견적\"으로 하고 U/PRICE를 넣어 주세요");return;}
-      setStatus(x,"QUOTATION","사무실",won(quoteAmt(x))+" 원");toast(`QUOTATION 작성 · ${x.owner} 공무감독 폰에 "새 견적 1건"`);save();return;
+    if(!x.lines.filter(l=>l.state!=="삭제").length){msgBox("견적 아이템이 존재하지 않습니다.","frmQuoProgress");return;}
+    const g=G4(x);
+    if(g==="접수"){
+      x.quoDate=todayISO();const vs=[...new Set(x.lines.filter(l=>l.state!=="삭제").map(l=>l.v1.name).filter(Boolean))];
+      setStatus(x,"INQUIRY","사무실",`ORDER 상태2 · 견적일자 ${x.quoDate} · 시트 ${vs.join(", ")||"(매입처 없음: 시트 0장)"}`);x.sheets=["작업"];vs.forEach(v=>addSheet(x,v+" (INQUIRY)"));
+      toast(`백업 저장: ${folder(x)}\\${x.fileName}.xlsm`);save();return;
     }
-    if(x.status==="CONFIRM"){
-      if(!x.lines.some(l=>l.state==="발주")){toast("발주할 줄의 상태를 \"발주\"로 해 주세요");return;}
-      setStatus(x,"PURCHASE","사무실",won(poAmt(x))+" 원 · "+[...new Set(x.lines.filter(l=>l.state==="발주").map(l=>l.vendor))].join(", "));toast("PURCHASE 작성 · 매입처별 발주서 전송");save();return;
+    if(g==="INQUIRY"){
+      const ok=x.lines.filter(l=>l.state!=="삭제"&&l.v1.name);
+      if(!ok.length){msgBox("1\n견적 아이템이 존재하지 않습니다.\n데이터는 정상적으로 업로드 되었으므로\n'서류(견적서) 재작성'을 하세요","frmQuoProgress");return;}
+      x.lines.forEach(l=>{if(l.state==="접수"||l.state==="견적"){l.state="견적";applyVendorRule(l);}});x.quoDate=todayISO();
+      setStatus(x,"QUOTATION","사무실",`ORDER 상태3 · 품목 전부 "견적" · 견적금액 ${won(quoteAmt(x))}`);addSheet(x,"QUOTATION");
+      toast(`QUOTATION 시트 작성 · ${x.owner} ${OWNERS[0].super} 폰에 "새 견적 1건" · 백업 저장`);save();return;
     }
+    if(g==="QUOTATION"){
+      if(!x.lines.some(l=>l.state==="발주")){msgBox("2\n발주로 확인된 견적 아이템이 존재하지 않습니다.\n데이터는 정상적으로 업로드 되었으므로\n'서류(견적서) 재작성'을 하세요\n\n(원본은 상태를 먼저 저장한 뒤 서류 단계에서 이 오류가 납니다. 시연에서는 N열을 \"발주\"로 바꾼 뒤 다시 누르세요.)","frmQuoProgress");return;}
+      x.poDate=todayISO();x.poNo=`${x.ownerBill}-${x.shipBill}-${yy()}-${String(S.seq.po++).padStart(4,"0")}`;x.rejected=false;
+      setStatus(x,"CONFIRM","사무실",`ORDER 상태4 · 발주일자 ${x.poDate} · 발주No ${x.poNo} 채번`);addSheet(x,"CONFIRM");
+      toast(`CONFIRM 시트 (SALES CONFIRM) 작성 · OUR P.O# ${x.poNo}`);save();return;
+    }
+    if(g==="CONFIRM"){
+      const vs=[...new Set(poLines(x).map(l=>l.vendor))];
+      setStatus(x,"PURCHASE","사무실",`ORDER 상태5 · 품목 발주일자 ${todayISO()} · 시트 ${vs.join(", ")}`);vs.forEach(v=>addSheet(x,v+" (PURCHASE ORDER)"));
+      toast("PURCHASE ORDER 시트 작성 (매입처별) · 백업 저장");save();return;
+    }
+    addEvent(x,"PURCHASE","사무실","PURCHASE ORDER 시트 다시 만듦 (상태 변경 없음)");toast("PURCHASE ORDER 시트를 다시 만듭니다 (상태 변경 없음)");save();return;
   }
-  if(id==="fake-ok"){x.lines.forEach(l=>{if(l.state==="견적")l.state="발주";});setStatus(x,"CONFIRM","PC 대신 승인");toast("PC에서 대신 CONFIRM (시연)");save();return;}
-  if(id==="os-open"){const s=selectedOrder();if(!s){toast("건을 선택해 주세요");return;}openFile=s.fileName;view="work";renderWeb();return;}
-  if(id==="to-in"){const s=selectedOrder();if(!s){toast("발주 건을 선택해 주세요");return;}openFile=s.fileName;
-    modal(`<h2>발주→입고</h2><p class="note" style="margin:0">${s.fileName} · ${s.ship} · 발주 ${s.lines.filter(l=>l.state==="발주").length}줄</p><div class="form"><label for="in-place">입고지<select id="in-place"><option>부산 창고</option><option>사무실</option><option>직송 (선박)</option></select></label><label for="in-weight">중량 (kg)<input id="in-weight" type="number" value="5"></label><label for="in-date">입고일<input id="in-date" type="date" value="${todayISO()}"></label></div><div class="actions" style="margin:0;justify-content:flex-end"><button class="btn" id="m-cancel">취소</button><button class="btn pri" id="in-ok">입고 등록</button></div>`);return;}
-  if(id==="to-dn"){const s=selectedOrder();if(!s){toast("입고 건을 선택해 주세요");return;}openFile=s.fileName;
-    modal(`<h2>인수증 (Inspection Report)</h2><div class="sheet"><div class="h"><span>Inspection Report (검수보고서)</span><span class="mono">${s.fileName}</span></div><div class="lh">${s.owner} · ${s.ship}</div><div class="tbl-wrap"><table><thead><tr><th>NO.</th><th>PART NO</th><th>DESCRIPTION</th><th class="r">Q'TY</th><th>REMARK</th></tr></thead><tbody>${s.lines.filter(l=>l.state==="발주").map((l,k)=>`<tr><td>${k+1}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td class="r num">${l.qty}</td><td></td></tr>`).join("")}</tbody></table></div></div>
-    <div class="form"><div class="radios"><label><input type="checkbox" id="dn-dom" checked>국내 탁송</label></div><label for="dn-place">PLACE<select id="dn-place"><option>BUSAN PORT</option><option>ULSAN PORT</option><option>YEOSU PORT</option><option>INCHEON PORT</option></select></label><label for="dn-date">납품일<input id="dn-date" type="date" value="${todayISO()}"></label></div>
-    <p class="note" style="margin:0">서버 폴더 국내선사\\${s.owner}\\0.인수증 에 파일로 저장됩니다. 저장하면 납품 상태가 되고 공무감독 폰에 표시됩니다.</p><div class="actions" style="margin:0;justify-content:flex-end"><button class="btn" id="m-cancel">취소</button><button class="btn pri" id="dn-ok">서버에 파일 저장</button></div>`);return;}
 });
-$("web").addEventListener("change",e=>{const x=S.orders.find(y=>y.fileName===openFile);if(x&&view==="work"&&e.target.id&&e.target.id.startsWith("w-")){readWork(x);persist();}});
+$("web").addEventListener("contextmenu",e=>{if(view==="order"&&e.target.closest("#os-grid")&&OS_MENU[tab]){e.preventDefault();if(!checkedItems().length){msgBox("아이템이 체크되지 않았습니다.");return;}openMenu();}});
+$("web").addEventListener("change",e=>{const x=S.orders.find(y=>y.fileName===openFile);if(x&&view==="work"&&e.target.id&&e.target.id.startsWith("w-")){readWork(x);persist();if(e.target.id.startsWith("w-st")||e.target.id.startsWith("w-v1n"))rerender();}});
 $("modal-root").addEventListener("click",e=>{
-  const id=e.target.id,x=S.orders.find(y=>y.fileName===openFile);
-  if(id==="m-cancel"||id==="ov"){closeModal();return;}
-  if(!x)return;
-  if(id==="in-ok"){x.입고지=$("in-place").value;x.중량=+$("in-weight").value||0;x.recvIn=$("in-date").value;setStatus(x,"입고","사무실",`${x.입고지} · ${x.중량}kg`);closeModal();tab="입고";toast("입고 등록 · [입고 검색] 탭으로");save();}
-  if(id==="dn-ok"){x.place=$("dn-place").value;x.delivered=$("dn-date").value;x.domestic=$("dn-dom").checked;setStatus(x,"납품","사무실",`인수증 · ${x.place}`);closeModal();tab="납품";toast(`인수증 저장 · 납품 · ${x.ship} 폰에 표시`);save();}
+  const id=e.target.id,x=S.orders.find(y=>y.fileName===openFile),pr=e.target.closest("[data-part]");
+  if(id==="m-cancel"||id==="ov"||id==="mb-ok"||id==="mb-no"||id==="ib-cancel"){closeModal();mbCb=null;return;}
+  if(id==="mb-yes"){const cb=mbCb;mbCb=null;closeModal();if(cb)cb();return;}
+  if(id==="ib-ok"){const v=$("ib-val").value.trim(),cb=mbCb;mbCb=null;closeModal();if(cb)cb(v);return;}
+  if(pr&&x){const l=line(+pr.dataset.part,1,"접수");x.lines.push(l);closeModal();toast(`${l.partNo} 추가`);save();return;}
+  if(id==="mn-in"){const its=checkedItems();closeModal();doIn(its);return;}
+  if(id==="mn-dn-dom"||id==="mn-dn-abr"){const its=checkedItems();closeModal();doDn(its,id==="mn-dn-abr");return;}
+  if(id==="mn-rv-in"){const its=checkedItems();closeModal();confirmBox("체크된 아이템의 입고지/중량은 제거됩니다.\n'환원' 작업을 계속하시겠습니까?",null,()=>{const t=new Set();its.forEach(({x,k})=>{const l=x.lines[k];if(l.state==="입고"){l.state="발주";l.inPlace="";l.weight=0;l.inDate="";t.add(x);}});t.forEach(x=>{addEvent(x,"PURCHASE","사무실","'발주'←'입고' 환원");syncItemStage(x);});closeModal();tab="발주";save();});return;}
+  if(id==="mn-rv-dn"){const its=checkedItems();closeModal();confirmBox("체크된 아이템의 PLACE는 제거됩니다.\n'환원' 작업을 계속하시겠습니까?",null,()=>{const t=new Set();its.forEach(({x,k})=>{const l=x.lines[k];if(l.state==="납품"){l.state="입고";l.place="";l.dnDate="";t.add(x);}});t.forEach(x=>{addEvent(x,"입고","사무실","'입고'←'납품' 환원");x.sheets=(x.sheets||[]).filter(s=>!s.endsWith(" (인수증)")&&!s.endsWith("_송장"));syncItemStage(x);});closeModal();tab="입고";save();});return;}
 });
 
-/* ---------- 공무감독 (폰) ---------- */
+/* ---------- 공무감독 (폰) : 원본에는 없는 화면. 선사가 메일로 받던 QUOTATION을 폰에서 보고 "발주 확인" 회신을 보낸다 ---------- */
 function renderMob(){
   const o=OWNERS[0],mine=S.orders.filter(x=>x.owner===o.name);
-  const pending=mine.filter(x=>x.status==="QUOTATION"&&!x.rejected);
+  const pending=mine.filter(x=>x.status==="QUOTATION"&&!x.rejected&&!x.phoneOk);
   let head,body;
+  const who=`<div class="who">${o.name} · ${o.super}</div>`;
   if(mView==="quote"){
     const x=S.orders.find(y=>y.fileName===openFile);if(!x){mView="ships";return renderMob();}
     if(x.status==="납품"){mView="ship";mShip=x.ship;toast("납품 완료 · 선박 화면으로");return renderMob();}
-    head=`<div class="who">${o.name} · 공무감독</div><div class="t"><button class="back" id="m-back" aria-label="뒤로">‹</button><span class="mono">${x.fileName}</span></div>`;
-    body=`<div class="card"><div class="top"><span class="ship">${x.ship}</span>${statusPill(x)}</div><div class="meta">Ref No ${x.refNo} · 담당 ${x.emp} · 접수 ${x.recvDate}</div></div>
+    head=`${who}<div class="t"><button class="back" id="m-back" aria-label="뒤로">‹</button><span class="mono">${x.fileName}</span></div>`;
+    body=`<div class="card"><div class="top"><span class="ship">${x.ship}</span>${statusPill(x)}</div><div class="meta">Request No. ${x.refNo} · 담당 ${x.emp} · 접수일자 ${x.recvDate}${x.poNo?` · OUR P.O# ${x.poNo}`:""}</div></div>
       ${quoDoc(x)}
-      ${x.status==="QUOTATION"&&!x.rejected?`<div class="big-btns"><button class="btn" id="m-rej">반려</button><button class="btn pri" id="m-ok">승인</button></div><div class="meta">승인 = 엑셀의 CONFIRM. 사무실 작업 시트 상태가 바로 CONFIRM으로 바뀝니다.</div>`:""}
+      ${x.status==="QUOTATION"&&!x.rejected&&!x.phoneOk?`<div class="big-btns"><button class="btn" id="m-rej">반려</button><button class="btn pri" id="m-ok">승인 (발주 확인)</button></div><div class="meta">승인하면 사무실 작업 시트의 품목 상태(N열)가 "발주"로 바뀌고, 사무실이 「서류_작성」을 눌러 CONFIRM 합니다. (엑셀 원본에서는 이 회신을 메일로 받습니다.)</div>`:""}
+      ${x.status==="QUOTATION"&&x.phoneOk?`<div class="banner info">발주 확인 회신 보냄 · 사무실 CONFIRM 처리 대기</div>`:""}
       ${x.rejected?`<div class="banner info">반려함 · ${x.rejectReason}</div>`:""}
-      ${si(x)>=3&&si(x)<DEMO_LAST?`<button class="banner ok" data-ship="${x.ship}">승인 완료 · 발주내역은 선박 화면에서<span>${x.ship} ›</span></button>`:""}
+      ${si(x)>=3&&si(x)<DEMO_LAST?`<button class="banner ok" data-ship="${x.ship}">CONFIRM 완료 · 발주내역은 선박 화면에서<span>${x.ship} ›</span></button>`:""}
       <div class="card"><b style="font-size:13px">진행</b>${rail(x,true)}${timeline(x)}</div>`;
   }else if(mView==="reject"){
-    head=`<div class="who">${o.name} · 공무감독</div><div class="t"><button class="back" id="m-back" aria-label="뒤로">‹</button>반려 사유</div>`;
+    head=`${who}<div class="t"><button class="back" id="m-back" aria-label="뒤로">‹</button>반려 사유</div>`;
     body=`<div class="card"><label for="m-reason">사유<select id="m-reason"><option>단가 조정 요청</option><option>수량 변경</option><option>납기(D.DAY) 변경</option><option>다른 부품으로 교체</option></select></label></div>
       <div class="big-btns"><button class="btn" id="m-back2">취소</button><button class="btn pri" id="m-rej-ok">사무실로 돌려보내기</button></div>`;
   }else if(mView==="ship"){
     const list=mine.filter(x=>x.ship===mShip);
     const cur=list.filter(x=>si(x)<DEMO_LAST&&si(x)>=1).slice(-1)[0];
-    const hist=list.filter(x=>x.status==="납품"||si(x)>DEMO_LAST).sort((a,b)=>a.delivered<b.delivered?1:-1);
-    const just=list.filter(x=>x.status==="납품").slice(-1)[0];
-    head=`<div class="who">${o.name} · 공무감독</div><div class="t"><button class="back" id="m-back" aria-label="뒤로">‹</button>${mShip}</div>`;
-    body=(cur?`<div class="card tap" data-file="${cur.fileName}"><div class="top"><span class="ship">진행 중 · <span class="mono">${cur.fileName}</span></span>${statusPill(cur)}</div>${rail(cur,true)}<b style="font-size:12.5px;margin-top:4px">발주내역 (Order Status Report)</b>${si(cur)>=4?orderStatusTable(cur,true):`<div class="meta">${cur.status} 단계 · 발주 전</div>`}${timeline(cur)}</div>`:
-      just&&just.delivered===todayISO()?`<div class="banner ok">납품 완료 · ${just.place} · 인수증 저장됨 (<span class="mono">${just.fileName}</span>)</div>`:`<div class="card"><div class="meta">진행 중인 건이 없습니다.</div></div>`)+
+    const hist=list.filter(x=>x.status==="납품"||si(x)>DEMO_LAST).sort((a,b)=>(a.lines[0]?.dnDate||"")<(b.lines[0]?.dnDate||"")?1:-1);
+    const just=list.filter(x=>x.status==="납품").slice(-1)[0],jl=just&&just.lines.find(l=>l.state==="납품");
+    head=`${who}<div class="t"><button class="back" id="m-back" aria-label="뒤로">‹</button>${mShip}</div>`;
+    body=(cur?`<div class="card tap" data-file="${cur.fileName}"><div class="top"><span class="ship">진행 중 · <span class="mono">${cur.fileName}</span></span>${statusPill(cur)}</div>${rail(cur,true)}<b style="font-size:12.5px;margin-top:4px">발주내역${cur.poNo?` · ORDER NO. : ${cur.poNo}`:""}</b>${si(cur)>=4?orderStatusTable(cur,true):`<div class="meta">${cur.status} 단계 · 발주 전</div>`}${timeline(cur)}</div>`:
+      jl&&jl.dnDate===todayISO()?`<div class="banner ok">납품 완료 · PLACE ${jl.place} · 인수증 ${jl.dnDate}_${just.ship}_${jl.place}.xlsx (<span class="mono">${just.fileName}</span>)</div>`:`<div class="card"><div class="meta">진행 중인 건이 없습니다.</div></div>`)+
       `<div class="card"><div class="top"><b style="font-size:13px">부품 이력</b><span class="meta">${hist.length}건</span></div>
-        <div class="tbl-wrap"><table><thead><tr><th>납품일</th><th>PART NO</th><th>DESCRIPTION</th><th class="r">Q'TY</th><th>PLACE</th></tr></thead><tbody>${hist.flatMap(x=>x.lines.filter(l=>l.state==="발주").map(l=>`<tr><td class="num">${x.delivered}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td class="r num">${l.qty} ${l.unit}</td><td>${x.place||""}</td></tr>`)).join("")||'<tr><td colspan="5" class="meta">아직 없습니다.</td></tr>'}</tbody></table></div></div>`;
+        <div class="tbl-wrap"><table><thead><tr><th>납품일자</th><th>PART NO</th><th>DESCRIPTION</th><th class="r">Q'TY</th><th>PLACE</th></tr></thead><tbody>${hist.flatMap(x=>x.lines.filter(l=>l.state==="납품").map(l=>`<tr><td class="num">${l.dnDate}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td class="r num">${l.qty} ${l.unit}</td><td>${l.place||""}</td></tr>`)).join("")||'<tr><td colspan="5" class="meta">아직 없습니다.</td></tr>'}</tbody></table></div></div>`;
   }else{
-    head=`<div class="who">${o.name} (${o.kind})</div><div class="t">공무감독 · 담당 선박</div>`;
+    head=`<div class="who">${o.name} (${o.kind})</div><div class="t">${o.super} · 담당 선박</div>`;
     body=(pending.length?`<button class="banner hot" data-file="${pending[0].fileName}">새 견적 ${pending.length}건<span>보기 ›</span></button>`:"")+
       o.ships.map(s=>{const cur=mine.filter(x=>x.ship===s&&si(x)<DEMO_LAST).slice(-1)[0];
         return `<div class="card tap" data-ship="${s}"><div class="top"><span class="ship">${s}</span>${cur?statusPill(cur):'<span class="pill">진행 없음</span>'}</div><div class="meta">${mine.filter(x=>x.ship===s).length}건 거래 · 납품 ${mine.filter(x=>x.ship===s&&x.status==="납품").length}건</div>${cur?rail(cur,true):""}</div>`}).join("")+
@@ -466,10 +657,10 @@ function renderMob(){
 $("ph-body").addEventListener("click",e=>{
   const id=e.target.id,b=e.target.closest("[data-file]"),sc=e.target.closest("[data-ship]");
   const x=S.orders.find(y=>y.fileName===openFile);
-  if(id==="m-ok"&&x){x.lines.forEach(l=>{if(l.state==="견적")l.state="발주";});setStatus(x,"CONFIRM","공무감독 폰");toast("승인(CONFIRM) · 사무실 작업 시트가 CONFIRM으로 바뀝니다");save();return;}
+  if(id==="m-ok"&&x){x.lines.forEach(l=>{if(l.state==="견적"){l.state="발주";applyVendorRule(l);}});x.phoneOk=true;addEvent(x,"QUOTATION","공무감독 폰","발주 확인 회신 · N열 발주");toast("발주 확인 회신 · 사무실이 서류_작성으로 CONFIRM 합니다");save();return;}
   if(id==="m-rej"){mView="reject";renderMob();return;}
   if(id==="m-back2"){mView="quote";renderMob();return;}
-  if(id==="m-rej-ok"&&x){x.rejected=true;x.rejectReason=$("m-reason").value;addEvent(x,"CONFIRM","공무감독 폰","반려: "+x.rejectReason);mView="quote";toast("사무실로 돌려보냈습니다");save();return;}
+  if(id==="m-rej-ok"&&x){x.rejected=true;x.rejectReason=$("m-reason").value;addEvent(x,"QUOTATION","공무감독 폰","반려: "+x.rejectReason);mView="quote";toast("사무실로 돌려보냈습니다");save();return;}
   if(b){openFile=b.dataset.file;mView="quote";renderMob();return;}
   if(sc){mShip=sc.dataset.ship;mView="ship";renderMob();return;}
 });
@@ -494,7 +685,7 @@ function setRole(r){
 }
 $("pick-office").onclick=()=>setRole("office");$("pick-sup").onclick=()=>setRole("sup");
 $("role-sw").onclick=()=>setRole(null);
-function resetDemo(){S=JSON.parse(JSON.stringify(DEFAULT));view="list";openFile=null;mView="ships";mShip=null;tab="발주";closeModal();rerender();toast("처음 상태로 돌아갑니다");persist();}
+function resetDemo(){S=JSON.parse(JSON.stringify(DEFAULT));view="list";prog="quo";openFile=null;showSheet=null;nqSel=null;mView="ships";mShip=null;tab="발주";closeModal();rerender();toast("처음 상태로 돌아갑니다");persist();}
 $("reset").onclick=resetDemo;
 
 /* 저장소: 외부 호스팅(Firebase 로그인+DB, FIREBASE_CONFIG) > 외부 서버(SYNC_URL) > claude.ai 공유 저장소 > 같은 컴퓨터의 창끼리 */
