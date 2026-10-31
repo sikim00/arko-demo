@@ -365,6 +365,11 @@ function sheetRows(x,cur){
   const ls=poLines(x);
   return [["발주내역"],[],["VESSEL NAME :",x.ship,"DATE:",todayISO()],["REF NO. :",x.refNo,"ORDER DATE. :",x.poDate||"","ORDER NO. :",x.poNo||""],[],["NO.","PART NO","DESCRIPTION","Q'TY","재고(입고예정일)","Remark","매입처","견적상태","입고(예정)일"],...ls.map((l,k)=>{const got=l.state!=="발주",due=addDays(x.poDate||x.recvDate,l.dday);return [k+1,l.partNo,l.desc,l.qty,got?`${l.inPlace||""} 준비완료`:`${due} 준비예정`,l.remark||"",l.vendor,l.state,got?l.inDate:due];})];
 }
+function dlWhere(){const u=navigator.userAgent||"";
+  if(/iPhone|iPad/.test(u))return "아이폰: 파일 앱 → 다운로드";
+  if(/Android/.test(u))return "안드로이드: 내 파일 → 다운로드";
+  if(/Windows/.test(u))return "윈도우: 파일 탐색기 → 다운로드 (C:\\Users\\사용자이름\\Downloads)";
+  return "맥: Finder → 다운로드 (/Users/사용자이름/Downloads)";}
 function downloadBlob(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);}
 function receiptDoc(x){
   const ls=x.lines.filter(l=>l.state==="납품");const l0=ls[0]||{};
@@ -590,7 +595,7 @@ $("web").addEventListener("click",e=>{
     const sh=(x.sheets||[]).filter(s=>s.endsWith(" (인수증)")||s.endsWith(" (발주내역)"));const cur=showSheet&&sh.includes(showSheet)?showSheet:sh[sh.length-1];
     const l=x.lines.find(z=>z.state==="납품");const fn=cur.endsWith(" (인수증)")?`${l?l.dnDate:todayISO()}_${x.ship}_${l?l.place:""}.xlsx`:`${x.ship}(ORDER LIST).xlsx`;
     const path=`${ROOT}\\국내선사\\${x.owner}\\0.인수증\\${fn}`;
-    confirmBox(`${path}\n현재 시트를 서버의 위 경로에 백업 저장 합니다.\n저장 하시겠습니까?`,null,()=>{x.saved=(x.saved||[]).concat([path]);closeModal();try{downloadBlob(xlsxBlob(cur.replace(/ \(.*\)$/,""),sheetRows(x,cur)),fn);}catch(e){}rerender();persist();msgBox(`저장 완료\n\n(시연) 같은 이름의 엑셀 파일 「${fn}」을 이 컴퓨터의 다운로드 폴더에 저장했습니다.\n맥: Finder → 다운로드 (/Users/사용자이름/Downloads)\n실제 운영에서는 위 서버 경로에 저장됩니다.`);});return;
+    confirmBox(`${path}\n현재 시트를 서버의 위 경로에 백업 저장 합니다.\n저장 하시겠습니까?`,null,()=>{x.saved=(x.saved||[]).concat([path]);closeModal();try{downloadBlob(xlsxBlob(cur.replace(/ \(.*\)$/,""),sheetRows(x,cur)),fn);}catch(e){}rerender();persist();msgBox(`저장 완료\n\n(시연) 같은 이름의 엑셀 파일 「${fn}」을 이 컴퓨터의 다운로드 폴더에 저장했습니다.\n${dlWhere()}\n실제 운영에서는 위 서버 경로에 저장됩니다.`);});return;
   }
   if(!x)return;
   if(id==="add-part"){modal(`<h2>부품 자동완성 (frmAuto)</h2><p class="note" style="margin:0">PARTNO 테이블의 테스트 행. 줄을 누르면 16행 아래에 추가됩니다 (Q'TY 1, 상태 접수).</p><div class="tbl-wrap"><table><thead><tr><th>Machinery</th><th>Maker</th><th>Type</th><th>PartNO</th><th>Description</th></tr></thead><tbody>${PARTS.map((p,i)=>`<tr class="click" data-part="${i}"><td>${p.machinery}</td><td>${p.maker}</td><td>${p.type}</td><td class="mono">${p.partNo}</td><td>${p.desc}</td></tr>`).join("")}</tbody></table></div><div class="actions" style="margin:0;justify-content:flex-end"><button class="btn" id="m-cancel">닫기</button></div>`);return;}
