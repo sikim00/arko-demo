@@ -331,6 +331,41 @@ function orderListDoc(x){
   return docHead(`${x.ship} (시트) · 발주내역`,x,`VESSEL NAME : ${x.ship} · DATE: ${todayISO()} · REF NO. : ${x.refNo} · ORDER DATE. : ${x.poDate} · ORDER NO. : ${x.poNo}`)+orderStatusTable(x,false)+`</div>`;
 }
 /* 인수증: A8 VESSEL NAME : · D7 DATE: · D8 PLACE: · 열 NO. | PART NO | DESCRIPTION | Q'TY | REAMRK (원본 철자) · 서명란 MASTER / CHIEF ENGINEER */
+/* 서버에 파일 저장 (시연): 브라우저는 서버 폴더에 쓸 수 없으므로, 같은 파일 이름의 실제 .xlsx를 이 컴퓨터의 다운로드 폴더로 내려받는다.
+   라이브러리 없이 최소 xlsx(zip, 무압축)를 만든다. 실제 운영에서는 서버 프로그램이 받아 공유 폴더에 쓴다. */
+const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC_T[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function zipStore(files){
+  const enc=new TextEncoder(),parts=[],cen=[];let off=0;
+  const u16=n=>[n&255,(n>>8)&255],u32=n=>[n&255,(n>>8)&255,(n>>16)&255,(n>>>24)&255];
+  files.forEach(([name,text])=>{const nb=enc.encode(name),db=enc.encode(text),c=crc32(db);
+    const lh=new Uint8Array([...u32(0x04034b50),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0),...u32(c),...u32(db.length),...u32(db.length),...u16(nb.length),...u16(0)]);
+    parts.push(lh,nb,db);
+    cen.push(new Uint8Array([...u32(0x02014b50),...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0),...u32(c),...u32(db.length),...u32(db.length),...u16(nb.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),nb);
+    off+=lh.length+nb.length+db.length;});
+  const cl=cen.reduce((n,a)=>n+a.length,0);
+  const end=new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cl),...u32(off),...u16(0)]);
+  return new Blob([...parts,...cen,end],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+function xlsxBlob(sheetName,rows){
+  const esc=v=>String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const col=i=>{let s="";i++;while(i){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26);}return s;};
+  const data=rows.map((r,ri)=>`<row r="${ri+1}">${r.map((v,ci)=>v===""||v==null?"":typeof v==="number"?`<c r="${col(ci)}${ri+1}"><v>${v}</v></c>`:`<c r="${col(ci)}${ri+1}" t="inlineStr"><is><t xml:space="preserve">${esc(v)}</t></is></c>`).join("")}</row>`).join("");
+  return zipStore([
+    ["[Content_Types].xml",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>'],
+    ["_rels/.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
+    ["xl/workbook.xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${esc(sheetName).slice(0,31)}" sheetId="1" r:id="rId1"/></sheets></workbook>`],
+    ["xl/_rels/workbook.xml.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>'],
+    ["xl/worksheets/sheet1.xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${data}</sheetData></worksheet>`]
+  ]);
+}
+function sheetRows(x,cur){
+  if(cur.endsWith(" (인수증)")){const ls=x.lines.filter(l=>l.state==="납품"),l0=ls[0]||{};
+    return [["인수증"],[],["VESSEL NAME :",x.ship,"","DATE:",l0.dnDate||""],["","","","PLACE:",l0.place||""],["MACHNERY:",l0.machinery||"","MAKER:",l0.maker||"","TYPE:",l0.type||""],[],["NO.","PART NO","DESCRIPTION","Q'TY","REAMRK"],...ls.map((l,k)=>[k+1,l.partNo,l.desc,l.qty,l.remark||""]),[],["","","","MASTER / CHIEF ENGINEER","____________"]];}
+  const ls=poLines(x);
+  return [["발주내역"],[],["VESSEL NAME :",x.ship,"DATE:",todayISO()],["REF NO. :",x.refNo,"ORDER DATE. :",x.poDate||"","ORDER NO. :",x.poNo||""],[],["NO.","PART NO","DESCRIPTION","Q'TY","재고(입고예정일)","Remark","매입처","견적상태","입고(예정)일"],...ls.map((l,k)=>{const got=l.state!=="발주",due=addDays(x.poDate||x.recvDate,l.dday);return [k+1,l.partNo,l.desc,l.qty,got?`${l.inPlace||""} 준비완료`:`${due} 준비예정`,l.remark||"",l.vendor,l.state,got?l.inDate:due];})];
+}
+function downloadBlob(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);}
 function receiptDoc(x){
   const ls=x.lines.filter(l=>l.state==="납품");const l0=ls[0]||{};
   return docHead(`${x.ship} (시트) · 인수증`,x,`VESSEL NAME : ${x.ship} · DATE: ${l0.dnDate||""} · PLACE: ${l0.place||""}`)+`<div class="lh">MACHNERY: ${l0.machinery||""} · MAKER: ${l0.maker||""} · TYPE: ${l0.type||""}</div><div class="tbl-wrap"><table><thead><tr><th>NO.</th><th>PART NO</th><th>DESCRIPTION</th><th class="r">Q'TY</th><th>REAMRK</th></tr></thead><tbody>${ls.map((l,k)=>`<tr><td>${k+1}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td class="r num">${l.qty} ${l.unit}</td><td>${l.remark||""}</td></tr>`).join("")}</tbody></table></div><div class="total"><span>MASTER / CHIEF ENGINEER ____________</span></div></div>`;
@@ -555,7 +590,7 @@ $("web").addEventListener("click",e=>{
     const sh=(x.sheets||[]).filter(s=>s.endsWith(" (인수증)")||s.endsWith(" (발주내역)"));const cur=showSheet&&sh.includes(showSheet)?showSheet:sh[sh.length-1];
     const l=x.lines.find(z=>z.state==="납품");const fn=cur.endsWith(" (인수증)")?`${l?l.dnDate:todayISO()}_${x.ship}_${l?l.place:""}.xlsx`:`${x.ship}(ORDER LIST).xlsx`;
     const path=`${ROOT}\\국내선사\\${x.owner}\\0.인수증\\${fn}`;
-    confirmBox(`${path}\n현재 시트를 서버의 위 경로에 백업 저장 합니다.\n저장 하시겠습니까?`,null,()=>{x.saved=(x.saved||[]).concat([path]);closeModal();rerender();persist();msgBox("저장 완료");});return;
+    confirmBox(`${path}\n현재 시트를 서버의 위 경로에 백업 저장 합니다.\n저장 하시겠습니까?`,null,()=>{x.saved=(x.saved||[]).concat([path]);closeModal();try{downloadBlob(xlsxBlob(cur.replace(/ \(.*\)$/,""),sheetRows(x,cur)),fn);}catch(e){}rerender();persist();msgBox(`저장 완료\n\n(시연) 같은 이름의 엑셀 파일 「${fn}」을 이 컴퓨터의 다운로드 폴더에 저장했습니다.\n맥: Finder → 다운로드 (/Users/사용자이름/Downloads)\n실제 운영에서는 위 서버 경로에 저장됩니다.`);});return;
   }
   if(!x)return;
   if(id==="add-part"){modal(`<h2>부품 자동완성 (frmAuto)</h2><p class="note" style="margin:0">PARTNO 테이블의 테스트 행. 줄을 누르면 16행 아래에 추가됩니다 (Q'TY 1, 상태 접수).</p><div class="tbl-wrap"><table><thead><tr><th>Machinery</th><th>Maker</th><th>Type</th><th>PartNO</th><th>Description</th></tr></thead><tbody>${PARTS.map((p,i)=>`<tr class="click" data-part="${i}"><td>${p.machinery}</td><td>${p.maker}</td><td>${p.type}</td><td class="mono">${p.partNo}</td><td>${p.desc}</td></tr>`).join("")}</tbody></table></div><div class="actions" style="margin:0;justify-content:flex-end"><button class="btn" id="m-cancel">닫기</button></div>`);return;}
