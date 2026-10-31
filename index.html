@@ -691,9 +691,21 @@ $("reset").onclick=resetDemo;
 /* 저장소: 외부 호스팅(Firebase 로그인+DB, FIREBASE_CONFIG) > 외부 서버(SYNC_URL) > claude.ai 공유 저장소 > 같은 컴퓨터의 창끼리 */
 const FIREBASE_CONFIG=window.FIREBASE_CONFIG||null;
 const SYNC_URL="";
+/* Firebase RTDB는 빈 배열([])과 null을 저장하지 않으므로, 받은 자료의 빠진 칸을 채운다 (새 접수 건의 lines 등) */
+const arr=v=>Array.isArray(v)?v:v&&typeof v==="object"?Object.values(v):[];
+function normalize(d){
+  if(!d||typeof d!=="object")return null;
+  d.orders=arr(d.orders);d.seq=d.seq||{order:4,po:4};
+  d.orders.forEach(x=>{
+    x.lines=arr(x.lines);x.events=arr(x.events);x.sheets=arr(x.sheets);if(!x.sheets.length)x.sheets=["작업"];if(x.saved)x.saved=arr(x.saved);
+    x.lines.forEach(l=>{l.v1=l.v1||{cur:"KRW",price:0,name:""};l.v1.name=l.v1.name||"";l.v1.cur=l.v1.cur||"KRW";l.v1.price=l.v1.price||0;l.remark=l.remark||"";l.vendor=l.vendor||"";l.cur=l.cur||"";});
+  });
+  return d;
+}
+const stable=v=>JSON.stringify(v,(k,val)=>val&&typeof val==="object"&&!Array.isArray(val)?Object.keys(val).sort().reduce((o,kk)=>(o[kk]=val[kk],o),{}):val);
 function applyState(d){
-  if(!d||!Array.isArray(d.orders))return;
-  if(JSON.stringify(d)===JSON.stringify(S))return;
+  d=normalize(d);if(!d)return;
+  if(stable(d)===stable(S))return;
   const ae=document.activeElement,editing=role==="office"&&(view==="new"||(view==="work"&&ae&&(ae.tagName==="INPUT"||ae.tagName==="SELECT")));
   S=d;if(!editing)rerender();
 }
@@ -742,7 +754,7 @@ function startFirebase(){
     if(!$("logout")){$("reset").after(b);b.onclick=()=>firebase.auth().signOut();}
     boot();
     fbRef=firebase.database().ref("demo/state2");
-    fbRef.on("value",snap=>{const d=snap.val();if(d&&Array.isArray(d.orders))applyState(d);else persist();setSync("서버 연동 (로그인됨)","ok");},e=>setSync("서버 연결 안 됨","warn"));
+    fbRef.on("value",snap=>{const d=snap.val();if(d&&typeof d==="object")applyState(d);else persist();setSync("서버 연동 (로그인됨)","ok");},e=>setSync("서버 연결 안 됨","warn"));
   });
 }
 if(!FIREBASE_CONFIG)boot();
