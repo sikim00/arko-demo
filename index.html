@@ -645,7 +645,7 @@ function renderMob(){
     head=`${who}<div class="t"><button class="back" id="m-back" aria-label="뒤로">‹</button>${mShip}</div>`;
     body=(cur?`<div class="card tap" data-file="${cur.fileName}"><div class="top"><span class="ship">진행 중 · <span class="mono">${cur.fileName}</span></span>${statusPill(cur)}</div>${rail(cur,true)}<b style="font-size:12.5px;margin-top:4px">발주내역${cur.poNo?` · ORDER NO. : ${cur.poNo}`:""}</b>${si(cur)>=4?orderStatusTable(cur,true):`<div class="meta">${cur.status} 단계 · 발주 전</div>`}${timeline(cur)}</div>`:
       jl&&jl.dnDate===todayISO()?`<div class="banner ok">납품 완료 · PLACE ${jl.place} · 인수증 ${jl.dnDate}_${just.ship}_${jl.place}.xlsx (<span class="mono">${just.fileName}</span>)</div>`:`<div class="card"><div class="meta">진행 중인 건이 없습니다.</div></div>`)+
-      `<div class="card"><div class="top"><b style="font-size:13px">부품 이력</b><span class="meta">${hist.length}건</span></div>
+      `<div class="card"><div class="top"><b style="font-size:13px">부품 이력</b><span class="meta">오더 ${hist.length}건 · 부품 ${hist.reduce((n,x)=>n+x.lines.filter(l=>l.state==="납품").length,0)}줄</span></div>
         <div class="tbl-wrap"><table><thead><tr><th>납품일자</th><th>PART NO</th><th>DESCRIPTION</th><th class="r">Q'TY</th><th>PLACE</th></tr></thead><tbody>${hist.flatMap(x=>x.lines.filter(l=>l.state==="납품").map(l=>`<tr><td class="num">${l.dnDate}</td><td class="mono">${l.partNo}</td><td>${l.desc}</td><td class="r num">${l.qty} ${l.unit}</td><td>${l.place||""}</td></tr>`)).join("")||'<tr><td colspan="5" class="meta">아직 없습니다.</td></tr>'}</tbody></table></div></div>`;
   }else{
     head=`<div class="who">${o.name} (${o.kind})</div><div class="t">${o.super} · 담당 선박</div>`;
