@@ -389,7 +389,7 @@ function vNew(){
       <label>선박 Ref No (발주처 Ref No)<input id="nq-ref" placeholder="예: SG-REQ-003"></label>
       <label>접수일자<input id="nq-date" type="date" value="${todayISO()}"></label>
       <label>Order ID (자동)<input id="nq-oid" value="${S.seq.order}" disabled></label>
-      <label>File Name (ENI Ref No)<input id="nq-file" value="${prefix}" placeholder="거래처빌-선박빌-YY-일련번호"></label>
+      <label>File Name (ENI Ref No)<input id="nq-file" value="${prefix}" placeholder="거래처빌-선박빌-YY-일련번호">${nqSel?`<span class="note">앞부분 ${prefix} 은 자동 · 뒤 일련번호만 입력</span>`:`<span class="note" style="color:#b45309">먼저 위 거래처 표에서 줄을 클릭하면 앞부분이 채워집니다</span>`}</label>
       <label>Department<select id="nq-dept">${DEPTS.map(d=>`<option>${d}</option>`).join("")}</select></label>
       <label>Voyage<input id="nq-voy"></label>
       <label>Supply port<input id="nq-port"></label>
